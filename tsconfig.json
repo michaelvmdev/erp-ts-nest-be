@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  // `mcp-postgres` es un paquete aparte, con su propio tsconfig y su propio
+  // sistema de módulos. Sin excluirlo, TypeScript lo toma como parte de este
+  // proyecto: lo compila dentro de dist/ y eleva el rootDir a la raíz, con lo
+  // que la salida de Nest queda en dist/src/main.js y `start:prod` deja de encontrarla.
+  "exclude": ["node_modules", "dist", "mcp-postgres"]
+}
