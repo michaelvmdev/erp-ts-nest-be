@@ -1,98 +1,242 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# crud-ts-nest-be
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de ventas construida con NestJS 11, TypeScript y PostgreSQL, siguiendo
+arquitectura hexagonal y diseño guiado por el dominio.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Puesta en marcha
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+Copiá `.env.example` a `.env` y completá tus credenciales de PostgreSQL. Después
+creá la base con su esquema:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+psql -h localhost -U postgres -c 'CREATE DATABASE "dbSales" ENCODING UTF8'
 ```
-
-## Run tests
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+psql -h localhost -U postgres -d dbSales -f db/db.sql -f db/db_ubigeo.sql -f db/db_products.sql
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+El orden importa: `db.sql` crea las tablas y los otros dos las pueblan.
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+| | |
+|---|---|
+| API | http://localhost:3000 |
+| Documentación Swagger | http://localhost:3000/docs |
+| Estado de la conexión | http://localhost:3000/health/db |
 
-## Resources
+Swagger solo se publica fuera de producción. Con `NODE_ENV=production` las rutas
+`/docs`, `/docs-json` y `/docs-yaml` ni se registran: responden 404.
 
-Check out a few resources that may come in handy when working with NestJS:
+## Arquitectura
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+El código se organiza en **capas concéntricas** y las dependencias apuntan
+siempre hacia adentro. El dominio no conoce a nadie; la infraestructura conoce a
+todos.
 
-## Support
+```
+src/products/
+├── domain/            ← reglas de negocio. Cero imports de NestJS o TypeORM
+│   ├── product.ts                    agregado raíz
+│   ├── product.errors.ts             errores del negocio
+│   ├── product.repository.ts         PUERTOS (interfaces) + tokens de inyección
+│   ├── product-search.criteria.ts    criterio de búsqueda
+│   └── value-objects/                Money, ProductId, ProductName…
+├── application/       ← casos de uso. Orquestan el dominio, no saben de HTTP
+│   ├── product.commands.ts           contratos de entrada
+│   └── *.use-case.ts                 uno por operación
+└── infrastructure/    ← ADAPTADORES. Lo único que conoce el mundo exterior
+    ├── persistence/                  TypeORM: entidad ORM, mapeador, repositorio
+    └── http/                         controlador y DTOs con Swagger
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+`src/shared/` contiene el núcleo común: la jerarquía de errores de dominio, la
+paginación y el filtro que traduce excepciones a respuestas HTTP.
 
-## Stay in touch
+### Por qué así
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**El dominio es puro.** `Product` y sus value objects se instancian y testean sin
+levantar Nest ni tocar una base. Si mañana la aplicación se expone por gRPC o se
+consume desde una cola, esa carpeta no cambia.
 
-## License
+**Los puertos los declara el dominio, no la infraestructura.** `ProductRepository`
+es una interfaz en `domain/`; `TypeOrmProductRepository` la implementa en
+`infrastructure/`. La dependencia queda invertida: la base de datos es un detalle
+enchufable y no el centro del diseño. Sustituirla por una implementación en
+memoria para tests son dos líneas en `products.module.ts`.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+**El modelo de dominio y el de persistencia están separados.** `Product` tiene
+value objects y métodos con intención; `ProductOrmEntity` refleja las columnas de
+`db/db.sql`. `ProductMapper` traduce entre ambos. Cuesta un archivo más y evita
+que las anotaciones de TypeORM contaminen las reglas de negocio.
+
+**El agregado no tiene setters.** Se construye por `Product.create()` (alta nueva)
+o `Product.rehydrate()` (viene de la base), y se modifica por métodos con nombre
+de intención: `rename`, `reprice`, `deactivate`. No existe un producto a medio
+armar.
+
+**Los value objects hacen imposibles los estados inválidos.** `Money` guarda
+céntimos como entero en vez de un decimal: con punto flotante `0.1 + 0.2` da
+`0.30000000000000004` y un total de venta termina descuadrado por céntimos que
+nadie sabe explicar. `ProductId` y `BrandId` son clases distintas, así que pasar
+uno donde va el otro es un error de compilación y no un bug en producción.
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/products/{productId}` | Consulta un producto |
+| `POST` | `/products/query` | Consulta varios con filtros y paginado |
+| `POST` | `/products` | Alta |
+| `PATCH` | `/products/{productId}` | Modificación parcial |
+| `DELETE` | `/products/{productId}` | Baja física |
+
+### Sobre `POST /products/query`
+
+Una búsqueda por `POST` rompe la expectativa REST de que `GET` es para leer, así
+que conviene justificarla: el filtro es un objeto anidado
+(`productUnitPrice.min` / `.max`) y va a crecer. Serializar estructuras en la
+query string obliga a inventar una convención de codificación, choca con el
+límite práctico de longitud de URL y termina siendo más frágil que un JSON.
+
+Devuelve **200, no 201**, precisamente porque no crea nada. La operación es de
+solo lectura y no tiene efectos secundarios; lo único que se pierde frente a un
+`GET` es la cacheabilidad HTTP.
+
+El subrecurso se llama `/query` y no `/search` ni `/filter` por consistencia con
+el nombre que ya usás en el resto de la especificación.
+
+### Filtros disponibles
+
+```json
+{
+  "productDescription": "inalambrico",
+  "productUnitPrice": { "min": 100, "max": 600 },
+  "brandId": "9c1e2f40-6b3a-4d21-8f77-1a2b3c4d5e6f",
+  "productActive": true,
+  "sortBy": "unitPrice",
+  "sortDirection": "DESC",
+  "page": 1,
+  "limit": 20
+}
+```
+
+Todos son opcionales y se combinan con `AND`. Un cuerpo vacío `{}` devuelve la
+primera página del catálogo completo. `productDescription` hace coincidencia
+parcial insensible a mayúsculas. `limit` tiene un tope de 100 para que nadie
+pueda pedir el catálogo entero de una sola vez.
+
+## Respuestas
+
+| Código | Cuándo |
+|---|---|
+| `200` | Consulta resuelta, o modificación aplicada |
+| `201` | Producto creado |
+| `204` | Producto eliminado. Sin cuerpo |
+| `400` | Validación del cuerpo, UUID mal formado, rango de precio invertido |
+| `404` | El producto o la marca no existen |
+| `409` | El producto está referenciado por ventas registradas |
+| `500` | Fallo no previsto |
+
+Todos los errores comparten la misma forma:
+
+```json
+{
+  "statusCode": 404,
+  "code": "PRODUCT_NOT_FOUND",
+  "message": "No existe un producto con id 3fa85f64-5717-4562-b3fc-2c963f66afa6.",
+  "path": "/products/3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "method": "GET",
+  "timestamp": "2026-07-28T02:14:07.123Z"
+}
+```
+
+`code` es el contrato estable: el cliente debe ramificar sobre él y no sobre el
+texto de `message`, que puede reescribirse. Los códigos actuales son
+`PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `PRODUCT_IN_USE`, `VALIDATION_ERROR`,
+`INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`,
+`INVALID_PRODUCT_TEXT` e `INTERNAL_ERROR`.
+
+En un `500` se agrega un `incidentId`. El detalle real queda en el log del
+servidor: al cliente no se le filtran trazas ni mensajes del driver.
+
+### El 409 al eliminar
+
+`DELETE` es baja física. Si el producto ya aparece en `sale_details`, la clave
+foránea lo impide y la API responde 409 en lugar de un 500 con un error crudo de
+PostgreSQL. Borrarlo dejaría huérfanas esas líneas de venta y falsearía el
+histórico. Para retirar un producto de la venta conservando su historia:
+
+```
+PATCH /products/{productId}   {"productActive": false}
+```
+
+### `PATCH` y la diferencia entre omitir y `null`
+
+Omitir un campo y enviarlo en `null` son cosas distintas. Omitir
+`productDescription` la deja como está; enviar `"productDescription": null` la
+borra. El caso de uso compara contra `undefined` y no por veracidad, para que
+`null`, `false` y `0` se apliquen como los valores legítimos que son.
+
+## Base de datos
+
+El esquema vive en `db/` y **lo gobierna el SQL, no las entidades**. Por eso
+TypeORM corre con `synchronize: false`.
+
+No es una precaución genérica: el esquema tiene restricciones que TypeORM no sabe
+representar y borraría al intentar "corregirlo" — los `CHECK` de formato de
+`sale_number`, las claves foráneas compuestas que impiden un distrito fuera de su
+departamento, y los tipos `char(2)/char(4)/char(6)` del ubigeo. Los cambios de
+esquema van por SQL o por migraciones.
+
+| Archivo | Contenido |
+|---|---|
+| `db/db.sql` | 8 tablas, restricciones, índices y 50 clientes de prueba |
+| `db/db_ubigeo.sql` | Ubigeo INEI: 25 departamentos, 196 provincias, 1874 distritos |
+| `db/db_products.sql` | 31 marcas y 100 productos de informática |
+
+## Variables de entorno
+
+Documentadas en `.env.example`.
+
+| Variable | Por defecto | |
+|---|---|---|
+| `NODE_ENV` | `development` | En `production` desactiva Swagger |
+| `PORT` | `3000` | |
+| `DB_HOST` | — | Obligatoria |
+| `DB_PORT` | `5432` | |
+| `DB_USER` | — | Obligatoria |
+| `DB_PASSWORD` | — | Obligatoria |
+| `DB_NAME` | — | Obligatoria |
+| `DB_LOGGING` | `false` | Imprime cada consulta de TypeORM |
+| `SWAGGER_ENABLED` | `true` | Solo apaga; nunca enciende en producción |
+
+Si falta una obligatoria, el proceso corta al arrancar con un mensaje que la
+nombra, en vez de fallar más tarde con un error ilegible del driver.
+
+## Comandos
+
+| Comando | |
+|---|---|
+| `npm run start:dev` | Desarrollo con recarga |
+| `npm run build` | Compila a `dist/` |
+| `npm run start:prod` | Ejecuta lo compilado |
+| `npm run lint` | ESLint con `--fix` |
+| `npm test` | Tests unitarios |
+| `npm run test:e2e` | Tests de extremo a extremo (requiere la base) |
+
+## Imagen de reemplazo
+
+`product_image` puede ser `null`. En ese caso el frontend debe usar
+`public/img/product-placeholder.svg`, que se adapta a tema claro y oscuro.
+
+La ruta del placeholder no se guarda en la base a propósito: mezclaría "no tiene
+imagen" con "tiene esta imagen" y después no habría forma de saber cuáles quedan
+por cargar.

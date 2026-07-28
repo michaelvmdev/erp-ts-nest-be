@@ -27,6 +27,13 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - Endpoint `GET /health/db` para comprobar la conexión. Devuelve 503 si la base
   no responde.
 - `.env.example` con todas las variables documentadas.
+- Módulo `products` con arquitectura hexagonal y DDD: dominio sin dependencias
+  de framework, casos de uso en la capa de aplicación, y TypeORM y HTTP como
+  adaptadores. Cinco endpoints: consulta individual, consulta paginada con
+  filtros, alta, modificación parcial y baja.
+- Respuestas de error unificadas en un solo formato con `code` estable,
+  producidas por un filtro global que traduce errores de dominio a códigos HTTP.
+- `ValidationPipe` global que rechaza campos no declarados en los DTOs.
 
 #### Base de datos — esquema (`db/db.sql`)
 
