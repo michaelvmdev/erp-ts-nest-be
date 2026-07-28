@@ -1,0 +1,82 @@
+# Changelog
+
+Todos los cambios notables de este proyecto se documentan en este archivo.
+
+El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
+y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+
+## [Sin publicar]
+
+### Añadido
+
+#### Backend
+
+- Proyecto NestJS 11 con TypeScript en modo estricto, ESLint y Prettier.
+- Scripts de `build`, `start:dev`, `start:prod`, `lint`, `test` y `test:e2e`.
+
+#### Base de datos — esquema (`db/db.sql`)
+
+- Esquema PostgreSQL de `dbSales` con 8 tablas: `brands`, `products`, `clients`,
+  `departments`, `provinces`, `districts`, `sales` y `sale_details`.
+- Claves primarias en todas las tablas. `sale_details` usa PK compuesta
+  `(sale_id, item)`.
+- Claves foráneas con la jerarquía de ubigeo completa. `sales` referencia
+  provincia y distrito con FK **compuestas**, de modo que la base impide guardar
+  una venta cuyo distrito no pertenezca al departamento elegido.
+- `sale_details` se borra en cascada al eliminar su venta.
+- Restricciones `CHECK` de integridad:
+  - `sale_number` con formato `DOC-0000001` (`^DOC-[0-9]{7}$`).
+  - `total = sub_total + igv`.
+  - `partial = quantity * unit_price` en cada línea de detalle.
+  - Importes y precios no negativos, `item` desde 1, `quantity` mayor que 0.
+  - Códigos de ubigeo numéricos y con el prefijo del padre.
+- `UNIQUE` sobre `sale_number`.
+- 13 índices: sobre `product_name`, todas las columnas `*_description` y las
+  claves foráneas, que PostgreSQL no indexa automáticamente.
+- El script es reejecutable: hace `DROP` de todo antes de crear.
+
+#### Base de datos — datos (`db/db_ubigeo.sql`)
+
+- Ubigeo completo del Perú en codificación INEI: 25 departamentos,
+  196 provincias y 1874 distritos.
+- Se corrigieron tres nombres respecto de la fuente: la provincia `1608` es
+  Putumayo (creada en 2014 por la Ley 30186, la fuente aún la rotulaba Maynas),
+  `1103` usa la grafía «Nasca» del INEI, y `0701` el nombre formal
+  «Prov. Const. del Callao».
+- Se restauraron 5 nombres de provincia que la fuente entregaba truncados a
+  20 caracteres.
+
+#### Base de datos — datos (`db/db_products.sql`)
+
+- 31 marcas y 100 productos de informática: laptops, Mac, smartphones, iPhone,
+  tablets, iPad, mouse, teclados, memorias USB, SSD, HDD, RAM, monitores,
+  procesadores, tarjetas gráficas, audífonos, routers, cámaras web e impresoras.
+- 5 productos quedan inactivos para poder probar filtros por estado.
+- 50 clientes de prueba en `db/db.sql`, 5 de ellos inactivos.
+
+### Notas de diseño
+
+Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
+
+- **Nomenclatura `snake_case`.** PostgreSQL pasa a minúsculas todo identificador
+  sin comillas, así que `productName` obligaría a escribir `"productName"` en
+  cada consulta. TypeORM y Prisma mapean `product_name` a `productName` en
+  TypeScript, de modo que las entidades Nest conservan camelCase.
+- **`uuid` en lugar de `varchar(32)`** para las claves primarias.
+- **`boolean` en lugar de `bit`** para los indicadores de activo.
+- **`numeric(12,2)` en lugar de `decimal(4,2)`** para importes: el tipo original
+  topaba en 99.99.
+- **`time` en lugar de `varchar(8)`** para `sale_hour`.
+- **`char(6)` para `district_id`**: el ubigeo de distrito tiene 6 dígitos.
+- `partial` se valida con un `CHECK` en vez de ser columna generada, porque
+  `GENERATED ... STORED` requiere PostgreSQL 12 y el objetivo es la 10.1.
+
+### Pendiente
+
+- Conexión del backend a la base: falta elegir ORM (TypeORM o Prisma) y generar
+  las entidades y los módulos CRUD.
+- Las URLs de `product_image` quedan como cadena vacía.
+- Los nombres de distrito están sin tildes: la fuente del padrón no las trae.
+- Evaluar unificar `sale_date` y `sale_hour` en un solo `timestamptz`.
+
+[Sin publicar]: https://github.com/michaelvargas7/crud-ts-nest-be
