@@ -1,9 +1,24 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { validateEnv } from './config/env.validation';
+import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
-  imports: [],
+  imports: [
+    ConfigModule.forRoot({
+      // Global: cualquier modulo puede inyectar ConfigService sin reimportarlo.
+      isGlobal: true,
+      envFilePath: '.env',
+      cache: true,
+      // Corta el arranque si falta o esta mal una variable obligatoria.
+      validate: validateEnv,
+    }),
+    DatabaseModule,
+    HealthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

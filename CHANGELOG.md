@@ -19,6 +19,14 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   con `SWAGGER_ENABLED=false`.
 - Imagen de reemplazo para productos sin foto en
   `public/img/product-placeholder.svg` (SVG, se adapta a tema claro y oscuro).
+- Conexión a PostgreSQL con TypeORM, configurada por variables de entorno
+  mediante `@nestjs/config`. `synchronize` queda desactivado: el esquema es el
+  de `db/db.sql` y lo gobierna el SQL, no las entidades.
+- Validación de variables de entorno al arrancar: si falta alguna obligatoria,
+  el proceso corta con un mensaje que la nombra.
+- Endpoint `GET /health/db` para comprobar la conexión. Devuelve 503 si la base
+  no responde.
+- `.env.example` con todas las variables documentadas.
 
 #### Base de datos — esquema (`db/db.sql`)
 
