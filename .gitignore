@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
 # Secretos y configuración local
 # ---------------------------------------------------------------------------
-# Lo más importante del archivo: mcp-postgres/.env tiene la cadena de conexión
-# a tu base. Nunca debe llegar al repositorio.
+# Lo más importante del archivo: un .env con la cadena de conexión a la base
+# nunca debe llegar al repositorio.
 .env
 .env.*
 *.env
@@ -138,6 +138,4 @@ $RECYCLE.BIN/
 # ---------------------------------------------------------------------------
 # Claude Code
 # ---------------------------------------------------------------------------
-# .mcp.json SÍ se versiona: registra el servidor MCP y no contiene credenciales
-# (esas viven en mcp-postgres/.env, ignorado arriba).
 .claude/settings.local.json

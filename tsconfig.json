@@ -22,9 +22,5 @@
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true
   },
-  // `mcp-postgres` es un paquete aparte, con su propio tsconfig y su propio
-  // sistema de módulos. Sin excluirlo, TypeScript lo toma como parte de este
-  // proyecto: lo compila dentro de dist/ y eleva el rootDir a la raíz, con lo
-  // que la salida de Nest queda en dist/src/main.js y `start:prod` deja de encontrarla.
-  "exclude": ["node_modules", "dist", "mcp-postgres"]
+  "exclude": ["node_modules", "dist"]
 }

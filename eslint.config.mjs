@@ -6,9 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    // mcp-postgres es un paquete independiente, con su propio tsconfig y estilo;
-    // no debe pasar por las reglas de este proyecto Nest.
-    ignores: ['eslint.config.mjs', 'dist/**', 'mcp-postgres/**'],
+    ignores: ['eslint.config.mjs', 'dist/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
