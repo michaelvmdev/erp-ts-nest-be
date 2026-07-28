@@ -13,6 +13,12 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 - Proyecto NestJS 11 con TypeScript en modo estricto, ESLint y Prettier.
 - Scripts de `build`, `start:dev`, `start:prod`, `lint`, `test` y `test:e2e`.
+- Documentación OpenAPI con Swagger en `/docs`, y el esquema en `/docs-json`
+  y `/docs-yaml`. **Solo fuera de producción**: con `NODE_ENV=production` las
+  rutas ni siquiera se registran y responden 404. Se puede apagar en desarrollo
+  con `SWAGGER_ENABLED=false`.
+- Imagen de reemplazo para productos sin foto en
+  `public/img/product-placeholder.svg` (SVG, se adapta a tema claro y oscuro).
 
 #### Base de datos — esquema (`db/db.sql`)
 
