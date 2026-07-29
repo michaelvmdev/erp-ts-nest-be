@@ -28,7 +28,7 @@ export class UpdateProductRequestDto {
   @ApiPropertyOptional({
     format: 'uuid',
     example: '9c1e2f40-6b3a-4d21-8f77-1a2b3c4d5e6f',
-    description: 'Nueva marca. Debe existir en `brands`.',
+    description: 'Nueva marca. Debe corresponder a una marca existente.',
   })
   @IsOptional()
   @IsUUID('4', { message: 'brandId debe ser un UUID valido.' })

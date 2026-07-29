@@ -23,7 +23,7 @@ export class CreateProductRequestDto {
   @ApiProperty({
     format: 'uuid',
     example: '9c1e2f40-6b3a-4d21-8f77-1a2b3c4d5e6f',
-    description: 'Marca del producto. Debe existir en `brands`.',
+    description: 'Marca del producto. Debe corresponder a una marca existente.',
   })
   @IsUUID('4', { message: 'brandId debe ser un UUID valido.' })
   brandId!: string;

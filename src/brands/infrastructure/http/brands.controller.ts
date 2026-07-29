@@ -142,8 +142,8 @@ export class BrandsController {
     description:
       'Actualizacion parcial: solo se modifican los campos presentes en el cuerpo.\n\n' +
       'Para desactivar una marca basta con enviar `{"brandActive": false}`. No existe ' +
-      'DELETE a proposito: sus productos la referencian por clave foranea y el historico ' +
-      'de ventas depende de ellos, asi que la unica baja posible es logica.',
+      'DELETE a proposito: una marca desactivada conserva sus productos y el historico ' +
+      'de ventas, asi que la unica baja posible es logica.',
   })
   @ApiParam({ name: 'brandId', format: 'uuid', example: UUID_EJEMPLO })
   @ApiOkResponse({ description: 'Marca actualizada.', type: BrandResponseDto })

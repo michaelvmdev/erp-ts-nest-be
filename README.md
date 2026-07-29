@@ -17,7 +17,7 @@ psql -h localhost -U postgres -c 'CREATE DATABASE "dbSales" ENCODING UTF8'
 ```
 
 ```bash
-psql -h localhost -U postgres -d dbSales -f db/db.sql -f db/db_ubigeo.sql -f db/db_products.sql
+psql -h localhost -U postgres -d dbSales -f db/db.sql -f db/db_ubigeo.sql -f db/db_data.sql
 ```
 
 El orden importa: `db.sql` crea las tablas y los otros dos las pueblan.
@@ -89,6 +89,33 @@ nadie sabe explicar. `ProductId` y `BrandId` son clases distintas, así que pasa
 uno donde va el otro es un error de compilación y no un bug en producción.
 
 ## Endpoints
+
+### Tipos de documento
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/document-types` | Catálogo completo |
+
+Devuelve un **arreglo plano**, sin envoltorio de paginado:
+
+```json
+[
+  { "documentTypeId": 1, "documentTypeDescription": "DNI" },
+  { "documentTypeId": 2, "documentTypeDescription": "RUC" }
+]
+```
+
+Es un catálogo fijo de dos filas. Paginarlo obligaría al cliente a leer un
+`meta` que nunca va a cambiar, así que la asimetría con marcas y productos es
+deliberada.
+
+Solo se expone la lectura: las filas se siembran desde `db/db.sql` porque sin
+ellas `clients.document_type_id` no puede referenciar nada, y el agregado de
+dominio ni siquiera ofrece un método `create`. Eso se documenta acá, no en
+Swagger — ver más abajo.
+
+El orden es por identificador —DNI y después RUC— y no alfabético: es el orden
+que le dio el negocio.
 
 ### Marcas
 
@@ -214,6 +241,23 @@ texto de `message`, que puede reescribirse. Los códigos actuales son
 En un `500` se agrega un `incidentId`. El detalle real queda en el log del
 servidor: al cliente no se le filtran trazas ni mensajes del driver.
 
+### Qué no se publica
+
+Swagger describe **el contrato de la API, no su implementación**. Nada de lo que
+sale por HTTP nombra tablas, columnas, archivos del repositorio, el motor de base
+de datos ni su versión.
+
+No es cosmética. La versión exacta del motor le dice a un atacante qué
+vulnerabilidades conocidas aplican, y los nombres de tabla y columna le ahorran
+la mitad del trabajo de reconocimiento para una inyección.
+
+Por eso `GET /health/db` responde solo `{ status, latencyMs }`: si la base falla,
+el mensaje del driver —que trae host, puerto, usuario y nombre de la base— va al
+log del servidor y al cliente le llega un texto genérico.
+
+Al escribir descripciones de Swagger, la regla es hablar en términos del negocio:
+«debe corresponder a una marca existente», no «debe existir en `brands`».
+
 ### El 409 al eliminar
 
 `DELETE` es baja física. Si el producto ya aparece en `sale_details`, la clave
@@ -245,9 +289,13 @@ esquema van por SQL o por migraciones.
 
 | Archivo | Contenido |
 |---|---|
-| `db/db.sql` | 8 tablas, restricciones, índices y 50 clientes de prueba |
+| `db/db.sql` | Estructura: 8 tablas, restricciones e índices. Sin datos |
 | `db/db_ubigeo.sql` | Ubigeo INEI: 25 departamentos, 196 provincias, 1874 distritos |
-| `db/db_products.sql` | 50 marcas y 200 productos de informática |
+| `db/db_data.sql` | Datos de prueba: 50 clientes, 50 marcas y 500 productos |
+
+`db.sql` solo crea estructuras y `db_data.sql` solo inserta filas, así que
+recargar los datos de prueba no obliga a recrear el esquema. El ubigeo va aparte
+porque no son datos de prueba sino el padrón oficial del INEI.
 
 ## Variables de entorno
 

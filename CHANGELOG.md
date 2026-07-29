@@ -42,6 +42,13 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - La descripción de marca es única ignorando mayúsculas y espacios; el alta o el
   renombrado duplicado responden 409 `BRAND_ALREADY_EXISTS`.
 
+- Módulo `document-types` con un único endpoint `GET /document-types`, que
+  devuelve el catálogo completo como arreglo plano. Es de solo lectura: el
+  agregado no expone `create` porque las filas las siembra `db/db.sql`.
+- Tablas `document_types` y `sale_types` con sus datos de referencia, y las
+  columnas `document_type_id` y `document_number` en `clients` con su clave
+  foránea, restricción de formato y unicidad del documento.
+
 #### Base de datos — esquema (`db/db.sql`)
 
 - Esquema PostgreSQL de `dbSales` con 8 tablas: `brands`, `products`, `clients`,
@@ -53,7 +60,8 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   una venta cuyo distrito no pertenezca al departamento elegido.
 - `sale_details` se borra en cascada al eliminar su venta.
 - Restricciones `CHECK` de integridad:
-  - `sale_number` con formato `DOC-0000001` (`^DOC-[0-9]{7}$`).
+  - `sale_number` con formato `FAC-0000000001` (`^[A-Z]{3}-[0-9]{10}$`): el
+    código de `sale_types` seguido de su correlativo.
   - `total = sub_total + igv`.
   - `partial = quantity * unit_price` en cada línea de detalle.
   - Importes y precios no negativos, `item` desde 1, `quantity` mayor que 0.
@@ -74,13 +82,16 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - Se restauraron 5 nombres de provincia que la fuente entregaba truncados a
   20 caracteres.
 
-#### Base de datos — datos (`db/db_products.sql`)
+#### Base de datos — datos (`db/db_data.sql`)
 
-- 31 marcas y 100 productos de informática: laptops, Mac, smartphones, iPhone,
-  tablets, iPad, mouse, teclados, memorias USB, SSD, HDD, RAM, monitores,
-  procesadores, tarjetas gráficas, audífonos, routers, cámaras web e impresoras.
-- 5 productos quedan inactivos para poder probar filtros por estado.
-- 50 clientes de prueba en `db/db.sql`, 5 de ellos inactivos.
+- 50 clientes, 50 marcas y 500 productos de informática: laptops y Mac,
+  smartphones, tablets, monitores, componentes, almacenamiento, periféricos,
+  audio, redes, impresión y accesorios.
+- 25 productos y 5 clientes quedan inactivos, para que los filtros por estado
+  tengan datos de ambos tipos sin necesidad de prepararlos.
+- Los datos de prueba se separaron de la estructura: `db/db.sql` solo crea
+  tablas y `db/db_data.sql` solo inserta filas, así que recargar el catálogo no
+  obliga a recrear el esquema.
 
 ### Notas de diseño
 
@@ -101,8 +112,7 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 
 ### Pendiente
 
-- Conexión del backend a la base: falta elegir ORM (TypeORM o Prisma) y generar
-  las entidades y los módulos CRUD.
+- Módulos CRUD para `clients`, el ubigeo y `sales`.
 - Las URLs de `product_image` quedan como cadena vacía.
 - Los nombres de distrito están sin tildes: la fuente del padrón no las trae.
 - Evaluar unificar `sale_date` y `sale_hour` en un solo `timestamptz`.

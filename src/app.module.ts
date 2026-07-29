@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
 import { BrandsModule } from './brands/brands.module';
 import { DatabaseModule } from './database/database.module';
+import { DocumentTypesModule } from './document-types/document-types.module';
 import { HealthModule } from './health/health.module';
 import { ProductsModule } from './products/products.module';
 
@@ -20,6 +21,7 @@ import { ProductsModule } from './products/products.module';
     }),
     DatabaseModule,
     HealthModule,
+    DocumentTypesModule,
     BrandsModule,
     ProductsModule,
   ],
