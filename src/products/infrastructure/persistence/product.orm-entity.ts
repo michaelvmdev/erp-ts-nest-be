@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { BrandOrmEntity } from '../../../brands/infrastructure/persistence/brand.orm-entity';
 
 /**
  * Modelo de persistencia. NO es el modelo de dominio.
@@ -13,15 +14,6 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
  * automatica de nombres: es mas verboso, pero deja el mapeo a la vista y evita
  * sorpresas si alguien cambia la convencion global.
  */
-@Entity({ name: 'brands' })
-export class BrandOrmEntity {
-  @PrimaryColumn({ name: 'brand_id', type: 'uuid' })
-  brandId!: string;
-
-  @Column({ name: 'brand_description', type: 'varchar', length: 50 })
-  brandDescription!: string;
-}
-
 @Entity({ name: 'products' })
 export class ProductOrmEntity {
   @PrimaryColumn({ name: 'product_id', type: 'uuid' })

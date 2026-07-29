@@ -14,7 +14,8 @@ import {
   ProductId,
 } from '../../domain/value-objects/identifiers.value-object';
 import { ProductMapper } from './product.mapper';
-import { BrandOrmEntity, ProductOrmEntity } from './product.orm-entity';
+import { BrandOrmEntity } from '../../../brands/infrastructure/persistence/brand.orm-entity';
+import { ProductOrmEntity } from './product.orm-entity';
 
 /** Violacion de clave foranea en PostgreSQL. */
 const PG_FOREIGN_KEY_VIOLATION = '23503';

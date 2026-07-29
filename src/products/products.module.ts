@@ -9,11 +9,9 @@ import {
   BRAND_EXISTENCE_CHECKER,
   PRODUCT_REPOSITORY,
 } from './domain/product.repository';
+import { BrandOrmEntity } from '../brands/infrastructure/persistence/brand.orm-entity';
 import { ProductsController } from './infrastructure/http/products.controller';
-import {
-  BrandOrmEntity,
-  ProductOrmEntity,
-} from './infrastructure/persistence/product.orm-entity';
+import { ProductOrmEntity } from './infrastructure/persistence/product.orm-entity';
 import { TypeOrmProductRepository } from './infrastructure/persistence/typeorm-product.repository';
 
 /**

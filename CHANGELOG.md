@@ -34,6 +34,13 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - Respuestas de error unificadas en un solo formato con `code` estable,
   producidas por un filtro global que traduce errores de dominio a códigos HTTP.
 - `ValidationPipe` global que rechaza campos no declarados en los DTOs.
+- Módulo `brands` con la misma arquitectura que `products`. Cuatro endpoints:
+  listado paginado con filtros por query string, consulta individual, alta y
+  modificación parcial. No expone `DELETE`: la baja es lógica.
+- Columna `brands.brand_active` en `db/db.sql`, necesaria para la baja lógica.
+  Lleva `DEFAULT true`, así que los `INSERT` del seed no cambian.
+- La descripción de marca es única ignorando mayúsculas y espacios; el alta o el
+  renombrado duplicado responden 409 `BRAND_ALREADY_EXISTS`.
 
 #### Base de datos — esquema (`db/db.sql`)
 

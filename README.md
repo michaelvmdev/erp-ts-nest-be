@@ -90,6 +90,52 @@ uno donde va el otro es un error de compilación y no un bug en producción.
 
 ## Endpoints
 
+### Marcas
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/brands` | Listado paginado con filtros |
+| `GET` | `/brands/{brandId}` | Consulta una marca |
+| `POST` | `/brands` | Alta |
+| `PATCH` | `/brands/{brandId}` | Modificación parcial y desactivación |
+
+**No hay `DELETE`, y es deliberado.** Los productos referencian la marca por
+clave foránea y el histórico de ventas depende de ellos, así que la única baja
+posible es lógica:
+
+```
+PATCH /brands/{brandId}   {"brandActive": false}
+```
+
+Los filtros de `GET /brands` viajan en la query string —`brandDescription`,
+`brandActive`, `sortDirection`, `page`, `limit`— porque son planos y de solo
+lectura, así que el `GET` queda cacheable. El tamaño de página por defecto es 50
+y no 20: las marcas suelen pedirse completas para poblar un desplegable.
+
+La descripción es única ignorando mayúsculas y espacios: "Apple", "apple" y
+" Apple " se consideran la misma marca y el alta duplicada responde 409.
+
+#### `brandActive`
+
+El campo recorre los cuatro endpoints:
+
+| Endpoint | Rol de `brandActive` |
+|---|---|
+| `GET /brands` | Filtro opcional. Omitirlo devuelve activas e inactivas |
+| `GET /brands/{brandId}` | Se devuelve siempre, esté activa o no |
+| `POST /brands` | Opcional en el cuerpo. Si se omite, la marca nace activa |
+| `PATCH /brands/{brandId}` | Enviar `false` la desactiva; `true` la reactiva |
+
+Una marca inactiva no se borra ni pierde sus productos: deja de ofrecerse para
+asignaciones nuevas y el histórico de ventas queda intacto.
+
+En la base es `brands.brand_active boolean NOT NULL DEFAULT true`. El seed lo
+declara explícitamente en cada fila aunque exista el `DEFAULT`, para que el
+estado quede a la vista y no dependa de un valor por omisión que podría cambiar
+en el esquema sin que nadie revise el archivo de datos.
+
+### Productos
+
 | Método | Ruta | Descripción |
 |---|---|---|
 | `GET` | `/products/{productId}` | Consulta un producto |
@@ -160,9 +206,10 @@ Todos los errores comparten la misma forma:
 
 `code` es el contrato estable: el cliente debe ramificar sobre él y no sobre el
 texto de `message`, que puede reescribirse. Los códigos actuales son
-`PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `PRODUCT_IN_USE`, `VALIDATION_ERROR`,
-`INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`,
-`INVALID_PRODUCT_TEXT` e `INTERNAL_ERROR`.
+`PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `PRODUCT_IN_USE`,
+`BRAND_ALREADY_EXISTS`, `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`,
+`INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`,
+`INVALID_BRAND_DESCRIPTION` e `INTERNAL_ERROR`.
 
 En un `500` se agrega un `incidentId`. El detalle real queda en el log del
 servidor: al cliente no se le filtran trazas ni mensajes del driver.
@@ -200,7 +247,7 @@ esquema van por SQL o por migraciones.
 |---|---|
 | `db/db.sql` | 8 tablas, restricciones, índices y 50 clientes de prueba |
 | `db/db_ubigeo.sql` | Ubigeo INEI: 25 departamentos, 196 provincias, 1874 distritos |
-| `db/db_products.sql` | 31 marcas y 100 productos de informática |
+| `db/db_products.sql` | 50 marcas y 200 productos de informática |
 
 ## Variables de entorno
 
