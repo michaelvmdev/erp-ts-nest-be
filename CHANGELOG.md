@@ -33,6 +33,8 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   filtros, alta, modificación parcial y baja.
 - Respuestas de error unificadas en un solo formato con `code` estable,
   producidas por un filtro global que traduce errores de dominio a códigos HTTP.
+- La respuesta `500` se declara en todas las operaciones de Swagger, inyectada
+  al construir el documento en vez de con un decorador repetido por controlador.
 - `ValidationPipe` global que rechaza campos no declarados en los DTOs.
 - Módulo `brands` con la misma arquitectura que `products`. Cuatro endpoints:
   listado paginado con filtros por query string, consulta individual, alta y
@@ -42,6 +44,14 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - La descripción de marca es única ignorando mayúsculas y espacios; el alta o el
   renombrado duplicado responden 409 `BRAND_ALREADY_EXISTS`.
 
+- Módulo `clients` con la misma arquitectura. Cuatro endpoints: listado paginado
+  con filtros, consulta individual, alta y modificación parcial —que es donde se
+  activa o desactiva—. No expone `DELETE`: la baja es lógica.
+- El tipo y el número de documento se modelan como un único value object, de
+  modo que la regla que los relaciona no puede quedar suelta: DNI de 8 dígitos,
+  RUC de 11 empezando en 10 o 20, y validación general para tipos aún sin regla.
+- El número de documento es único entre clientes; el alta duplicada responde 409
+  `CLIENT_DOCUMENT_ALREADY_EXISTS`.
 - Módulo `document-types` con un único endpoint `GET /document-types`, que
   devuelve el catálogo completo como arreglo plano. Es de solo lectura: el
   agregado no expone `create` porque las filas las siembra `db/db.sql`.
@@ -51,7 +61,8 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 #### Base de datos — esquema (`db/db.sql`)
 
-- Esquema PostgreSQL de `dbSales` con 8 tablas: `brands`, `products`, `clients`,
+- Esquema PostgreSQL de `dbSales` con 10 tablas: `brands`, `products`, `clients`,
+  `document_types`, `sale_types`,
   `departments`, `provinces`, `districts`, `sales` y `sale_details`.
 - Claves primarias en todas las tablas. `sale_details` usa PK compuesta
   `(sale_id, item)`.
@@ -84,10 +95,11 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 #### Base de datos — datos (`db/db_data.sql`)
 
-- 50 clientes, 50 marcas y 500 productos de informática: laptops y Mac,
+- Catálogos de referencia (`document_types` y `sale_types`), 100 clientes,
+  50 marcas y 500 productos de informática: laptops y Mac,
   smartphones, tablets, monitores, componentes, almacenamiento, periféricos,
   audio, redes, impresión y accesorios.
-- 25 productos y 5 clientes quedan inactivos, para que los filtros por estado
+- 25 productos y 10 clientes quedan inactivos, para que los filtros por estado
   tengan datos de ambos tipos sin necesidad de prepararlos.
 - Los datos de prueba se separaron de la estructura: `db/db.sql` solo crea
   tablas y `db/db_data.sql` solo inserta filas, así que recargar el catálogo no
