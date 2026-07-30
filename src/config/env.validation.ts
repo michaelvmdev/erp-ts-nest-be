@@ -1,7 +1,7 @@
 /**
  * Valida las variables de entorno al arrancar.
  *
- * La idea es fallar de inmediato y con un mensaje claro. Sin esto, un DB_PASSWORD
+ * La idea es fallar de inmediato y con un mensaje claro. Sin esto, un POSTGRES_PASSWORD
  * ausente no se nota hasta que el driver intenta conectar, y el error que sale
  * ("password authentication failed" o "client password must be a string") no
  * apunta al problema real.
@@ -9,15 +9,20 @@
 export interface EnvVars {
   NODE_ENV: string;
   PORT: number;
-  DB_HOST: string;
-  DB_PORT: number;
-  DB_USER: string;
-  DB_PASSWORD: string;
-  DB_NAME: string;
-  DB_LOGGING: boolean;
+  POSTGRES_HOST: string;
+  POSTGRES_PORT: number;
+  POSTGRES_USER: string;
+  POSTGRES_PASSWORD: string;
+  POSTGRES_DATABASE: string;
+  POSTGRES_LOGGING: boolean;
 }
 
-const REQUERIDAS = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'] as const;
+const REQUERIDAS = [
+  'POSTGRES_HOST',
+  'POSTGRES_USER',
+  'POSTGRES_PASSWORD',
+  'POSTGRES_DATABASE',
+] as const;
 
 /**
  * process.env solo contiene strings, pero el tipo que recibe `validate` es
@@ -67,11 +72,11 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   return {
     NODE_ENV: nodeEnv === '' ? 'development' : nodeEnv,
     PORT: toPort(config.PORT, 3000, 'PORT'),
-    DB_HOST: asString(config.DB_HOST),
-    DB_PORT: toPort(config.DB_PORT, 5432, 'DB_PORT'),
-    DB_USER: asString(config.DB_USER),
-    DB_PASSWORD: asString(config.DB_PASSWORD),
-    DB_NAME: asString(config.DB_NAME),
-    DB_LOGGING: toBool(config.DB_LOGGING),
+    POSTGRES_HOST: asString(config.POSTGRES_HOST),
+    POSTGRES_PORT: toPort(config.POSTGRES_PORT, 5432, 'POSTGRES_PORT'),
+    POSTGRES_USER: asString(config.POSTGRES_USER),
+    POSTGRES_PASSWORD: asString(config.POSTGRES_PASSWORD),
+    POSTGRES_DATABASE: asString(config.POSTGRES_DATABASE),
+    POSTGRES_LOGGING: toBool(config.POSTGRES_LOGGING),
   };
 }

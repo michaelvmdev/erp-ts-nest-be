@@ -1,5 +1,12 @@
 import { INestApplication, Logger } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import {
+  DocumentBuilder,
+  OpenAPIObject,
+  SwaggerModule,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ApiErrorDto } from './shared/infrastructure/http/api-error.dto';
+import { ejemploDeError } from './shared/infrastructure/http/error-examples';
 
 /** Ruta donde se monta la UI. El JSON queda en `${SWAGGER_PATH}-json`. */
 export const SWAGGER_PATH = 'docs';
@@ -22,6 +29,109 @@ export function isSwaggerEnabled(): boolean {
   return process.env.SWAGGER_ENABLED?.toLowerCase() !== 'false';
 }
 
+const METODOS_HTTP = [
+  'get',
+  'post',
+  'put',
+  'patch',
+  'delete',
+  'options',
+  'head',
+] as const;
+
+/**
+ * Declara la respuesta 500 en toda operacion que no la traiga ya.
+ *
+ * Cualquier endpoint puede fallar de forma imprevista, asi que el 500 forma
+ * parte del contrato de todos por igual. Se inyecta aqui y no con un decorador
+ * en cada controlador por dos razones: son once operaciones hoy y crecen, y un
+ * decorador repetido se olvida justo en el endpoint nuevo. Este recorrido no
+ * puede olvidarse de ninguno.
+ *
+ * Si una operacion ya declara su propio 500, se respeta.
+ */
+function documentarErrorInterno(document: OpenAPIObject): OpenAPIObject {
+  // La respuesta se construye dentro del bucle, una por operacion. Compartir un
+  // unico objeto entre todas parece inofensivo, pero al ponerle luego su ejemplo
+  // se estaria escribiendo sobre la misma referencia y el ultimo metodo
+  // procesado dejaria su `method` en el ejemplo de todos los demas.
+  const nuevaRespuesta = () => ({
+    description:
+      'Error interno no previsto. El cuerpo incluye un `incidentId` que permite ' +
+      'cruzar la respuesta con la traza completa del servidor; el detalle del fallo ' +
+      'no se expone al cliente.',
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorDto) },
+      },
+    },
+  });
+
+  for (const item of Object.values(document.paths)) {
+    for (const metodo of METODOS_HTTP) {
+      const operacion = item[metodo];
+      if (!operacion) {
+        continue;
+      }
+      if (operacion.responses?.['500']) {
+        continue;
+      }
+      operacion.responses = { ...operacion.responses, '500': nuevaRespuesta() };
+    }
+  }
+
+  return document;
+}
+
+/**
+ * Pone un ejemplo propio en cada respuesta de error.
+ *
+ * Todas comparten el esquema ApiErrorDto, asi que Swagger muestra por defecto el
+ * mismo ejemplo en el 400, el 409 y el 500: el que traen los `example` del DTO.
+ * Aqui se reemplaza por uno construido con la ruta, el metodo y el codigo reales
+ * de cada operacion, de modo que lo que se lee en la documentacion coincide con
+ * lo que devuelve el servidor.
+ *
+ * Solo se tocan las respuestas 400 y superiores que usan ApiErrorDto: los 2xx
+ * tienen su propio esquema y sus propios ejemplos.
+ */
+function ejemplificarErrores(document: OpenAPIObject): OpenAPIObject {
+  const refError = getSchemaPath(ApiErrorDto);
+
+  for (const [ruta, item] of Object.entries(document.paths)) {
+    for (const metodo of METODOS_HTTP) {
+      const operacion = item[metodo];
+      if (!operacion?.responses) {
+        continue;
+      }
+
+      for (const [codigo, respuesta] of Object.entries(operacion.responses)) {
+        const status = Number(codigo);
+        if (!respuesta || !Number.isInteger(status) || status < 400) {
+          continue;
+        }
+
+        const media =
+          'content' in respuesta
+            ? respuesta.content?.['application/json']
+            : undefined;
+        const schema = media?.schema;
+
+        // El esquema puede ser una referencia o una definicion inline. Solo se
+        // ejemplifican las que apuntan a ApiErrorDto.
+        const ref = schema && '$ref' in schema ? schema.$ref : undefined;
+        if (!media || ref !== refError) {
+          continue;
+        }
+
+        media.example = ejemploDeError(status, ruta, metodo);
+      }
+    }
+  }
+
+  return document;
+}
+
 export function setupSwagger(app: INestApplication): void {
   const config = new DocumentBuilder()
     .setTitle('dbSales API')
@@ -37,7 +147,20 @@ export function setupSwagger(app: INestApplication): void {
 
   // Factory en vez de documento ya construido: Nest 11 lo genera al primer
   // request en lugar de en el arranque, y asi no penaliza el tiempo de inicio.
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  // El orden importa: primero se agrega el 500 a todas las operaciones y despues
+  // se ejemplifican los errores, para que el 500 recien inyectado tambien reciba
+  // su ejemplo.
+  const documentFactory = () =>
+    ejemplificarErrores(
+      documentarErrorInterno(
+        // extraModels garantiza que ApiErrorDto quede en components aunque ningun
+        // endpoint lo referencie explicitamente: la respuesta 500 que se inyecta
+        // apunta a el por $ref.
+        SwaggerModule.createDocument(app, config, {
+          extraModels: [ApiErrorDto],
+        }),
+      ),
+    );
 
   SwaggerModule.setup(SWAGGER_PATH, app, documentFactory, {
     customSiteTitle: 'dbSales API — docs',

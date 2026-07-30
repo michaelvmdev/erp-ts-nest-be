@@ -117,6 +117,47 @@ Swagger — ver más abajo.
 El orden es por identificador —DNI y después RUC— y no alfabético: es el orden
 que le dio el negocio.
 
+### Clientes
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/clients` | Listado paginado con filtros |
+| `GET` | `/clients/{clientId}` | Consulta un cliente |
+| `POST` | `/clients` | Alta |
+| `PATCH` | `/clients/{clientId}` | Modificación parcial, activación y desactivación |
+
+Sin `DELETE`, por la misma razón que en marcas: un cliente desactivado conserva
+su historial de compras.
+
+Filtros de `GET /clients`, todos opcionales y combinados con `AND`:
+`clientDescription` (parcial), `documentNumber` (**exacto**), `documentTypeId`,
+`clientActive`, `sortBy`, `sortDirection`, `page`, `limit`.
+
+La búsqueda por documento es exacta y no parcial: identifica a un único cliente,
+así que quien lo escribe completo espera esa fila y no una lista de las que lo
+contienen.
+
+#### Tipo y número de documento van juntos
+
+Se modelan como un solo value object, no como dos campos sueltos. La regla que
+los relaciona no pertenece a ninguno de los dos por separado: un `"12345678"` no
+es válido ni inválido en sí mismo, lo es en función del tipo que lo acompaña.
+
+| Tipo | Regla |
+|---|---|
+| DNI | exactamente 8 dígitos |
+| RUC | exactamente 11 dígitos, empezando en `10` (persona natural) o `20` (persona jurídica) |
+| Otro | solo la forma general: 8 u 11 dígitos |
+
+Un tipo que todavía no tiene regla propia —carné de extranjería, pasaporte— pasa
+con la validación general, así que agregarlo al catálogo no rompe las altas
+mientras se define su regla.
+
+En `PATCH`, el documento se rearma completo aunque venga una sola de sus partes.
+Enviar solo `documentTypeId` para pasar de DNI a RUC falla con 400, y está bien
+que así sea: el número vigente de 8 dígitos no es un RUC válido. Hay que enviar
+ambos.
+
 ### Marcas
 
 | Método | Ruta | Descripción |
@@ -233,13 +274,30 @@ Todos los errores comparten la misma forma:
 
 `code` es el contrato estable: el cliente debe ramificar sobre él y no sobre el
 texto de `message`, que puede reescribirse. Los códigos actuales son
-`PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `PRODUCT_IN_USE`,
-`BRAND_ALREADY_EXISTS`, `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`,
-`INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`,
-`INVALID_BRAND_DESCRIPTION` e `INTERNAL_ERROR`.
+`PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CLIENT_NOT_FOUND`,
+`DOCUMENT_TYPE_NOT_FOUND`, `PRODUCT_IN_USE`, `BRAND_ALREADY_EXISTS`,
+`CLIENT_DOCUMENT_ALREADY_EXISTS`, `VALIDATION_ERROR`, `INVALID_UUID`,
+`INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`,
+`INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`,
+`INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`,
+`INVALID_DOCUMENT_TYPE_ID` e `INTERNAL_ERROR`.
 
 En un `500` se agrega un `incidentId`. El detalle real queda en el log del
 servidor: al cliente no se le filtran trazas ni mensajes del driver.
+
+El `500` está declarado en **todas** las operaciones de Swagger, pero no con un
+decorador repetido en cada controlador: se inyecta al construir el documento, en
+`src/swagger.ts`. Cualquier endpoint puede fallar de forma imprevista, así que
+el `500` es parte del contrato de todos por igual — y un decorador repetido se
+olvida justo en el endpoint nuevo. Si una operación declara su propio `500`, se
+respeta.
+
+Todas las respuestas de error comparten el esquema `ApiErrorDto`, así que Swagger
+mostraría el mismo ejemplo bajo el `400`, el `409` y el `500`. Para evitarlo,
+cada respuesta recibe un ejemplo propio construido con la ruta, el método y el
+código reales de esa operación: el `409` de `DELETE /products/{productId}` dice
+`PRODUCT_IN_USE`, el de `POST /clients` dice `CLIENT_DOCUMENT_ALREADY_EXISTS`, y
+`incidentId` aparece solo en el `500`, que es el único que lo lleva.
 
 ### Qué no se publica
 
@@ -289,13 +347,18 @@ esquema van por SQL o por migraciones.
 
 | Archivo | Contenido |
 |---|---|
-| `db/db.sql` | Estructura: 8 tablas, restricciones e índices. Sin datos |
+| `db/db.sql` | Estructura: 10 tablas, restricciones e índices. Sin datos |
 | `db/db_ubigeo.sql` | Ubigeo INEI: 25 departamentos, 196 provincias, 1874 distritos |
-| `db/db_data.sql` | Datos de prueba: 50 clientes, 50 marcas y 500 productos |
+| `db/db_data.sql` | Catálogos de referencia, 100 clientes, 50 marcas y 500 productos |
 
 `db.sql` solo crea estructuras y `db_data.sql` solo inserta filas, así que
-recargar los datos de prueba no obliga a recrear el esquema. El ubigeo va aparte
-porque no son datos de prueba sino el padrón oficial del INEI.
+recargar los datos no obliga a recrear el esquema. El ubigeo va aparte por
+volumen —2095 filas— y porque no son datos de prueba sino el padrón del INEI.
+
+Dentro de `db_data.sql`, los catálogos de referencia (`document_types` y
+`sale_types`) no son datos descartables: sin ellos `clients` no tiene a qué
+apuntar y la base queda inutilizable. Por eso van primero, antes de los datos de
+prueba propiamente dichos.
 
 ## Variables de entorno
 
@@ -305,12 +368,12 @@ Documentadas en `.env.example`.
 |---|---|---|
 | `NODE_ENV` | `development` | En `production` desactiva Swagger |
 | `PORT` | `3000` | |
-| `DB_HOST` | — | Obligatoria |
-| `DB_PORT` | `5432` | |
-| `DB_USER` | — | Obligatoria |
-| `DB_PASSWORD` | — | Obligatoria |
-| `DB_NAME` | — | Obligatoria |
-| `DB_LOGGING` | `false` | Imprime cada consulta de TypeORM |
+| `POSTGRES_HOST` | — | Obligatoria |
+| `POSTGRES_PORT` | `5432` | |
+| `POSTGRES_USER` | — | Obligatoria |
+| `POSTGRES_PASSWORD` | — | Obligatoria |
+| `POSTGRES_DATABASE` | — | Obligatoria |
+| `POSTGRES_LOGGING` | `false` | Imprime cada consulta de TypeORM |
 | `SWAGGER_ENABLED` | `true` | Solo apaga; nunca enciende en producción |
 
 Si falta una obligatoria, el proceso corta al arrancar con un mensaje que la
