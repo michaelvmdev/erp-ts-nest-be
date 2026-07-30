@@ -35,6 +35,12 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   producidas por un filtro global que traduce errores de dominio a códigos HTTP.
 - La respuesta `500` se declara en todas las operaciones de Swagger, inyectada
   al construir el documento en vez de con un decorador repetido por controlador.
+- Cada respuesta de error lleva su propio ejemplo, generado con la ruta, el
+  método y el código reales de la operación. Antes todas compartían el ejemplo
+  de `ApiErrorDto`, que describía un 404 de producto y mostraba `incidentId`
+  incluso en códigos que no lo devuelven.
+- `message` se documenta como `string` o lista de `string`, que es lo que
+  realmente devuelve según venga del dominio o de la validación del cuerpo.
 - `ValidationPipe` global que rechaza campos no declarados en los DTOs.
 - Módulo `brands` con la misma arquitectura que `products`. Cuatro endpoints:
   listado paginado con filtros por query string, consulta individual, alta y

@@ -114,6 +114,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
       [HttpStatus.CONFLICT]: 'CONFLICT',
       [HttpStatus.PAYLOAD_TOO_LARGE]: 'PAYLOAD_TOO_LARGE',
       [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
+      [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
     };
     return mapa[status] ?? 'HTTP_ERROR';
   }

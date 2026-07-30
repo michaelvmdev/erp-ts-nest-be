@@ -6,13 +6,22 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
  * Que cada endpoint devuelva la misma forma ante cualquier fallo permite al
  * cliente escribir un solo manejador. `code` es el contrato estable para
  * decidir por programa; `message` es para que lo lea una persona.
+ *
+ * Los `example` de aqui describen la forma del objeto, no un caso concreto: cada
+ * respuesta de Swagger trae su propio ejemplo ajustado a su codigo de estado y a
+ * su ruta, generado en error-examples.ts.
  */
 export class ApiErrorDto {
-  @ApiProperty({ example: 404, description: 'Codigo de estado HTTP.' })
+  @ApiProperty({
+    type: 'integer',
+    example: 400,
+    description:
+      'Codigo de estado HTTP, repetido en el cuerpo para no depender de la cabecera.',
+  })
   statusCode!: number;
 
   @ApiProperty({
-    example: 'PRODUCT_NOT_FOUND',
+    example: 'VALIDATION_ERROR',
     description:
       'Identificador estable del error. Es la clave sobre la que debe ramificar el cliente; ' +
       'a diferencia del mensaje, no cambia con las reescrituras de texto.',
@@ -20,28 +29,37 @@ export class ApiErrorDto {
   code!: string;
 
   @ApiProperty({
+    oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
     example:
-      'No existe un producto con id 3fa85f64-5717-4562-b3fc-2c963f66afa6.',
+      'documentNumber debe tener 8 u 11 digitos, sin letras ni separadores.',
     description:
-      'Explicacion legible. Puede ser una lista cuando falla la validacion del cuerpo.',
-    type: 'string',
+      'Explicacion legible. Es un texto cuando el error viene del dominio, y una lista ' +
+      'cuando la validacion del cuerpo acumula varios campos invalidos.',
   })
   message!: string | string[];
 
-  @ApiProperty({ example: '/products/3fa85f64-5717-4562-b3fc-2c963f66afa6' })
+  @ApiProperty({
+    example: '/clients',
+    description: 'Ruta que se solicito, con los parametros ya resueltos.',
+  })
   path!: string;
 
-  @ApiProperty({ example: 'POST' })
+  @ApiProperty({ example: 'POST', description: 'Metodo HTTP de la peticion.' })
   method!: string;
 
-  @ApiProperty({ example: '2026-07-28T02:14:07.123Z', format: 'date-time' })
+  @ApiProperty({
+    example: '2026-07-28T02:14:07.123Z',
+    format: 'date-time',
+    description: 'Momento en que se genero la respuesta, en UTC.',
+  })
   timestamp!: string;
 
   @ApiPropertyOptional({
-    description:
-      'Identificador de la incidencia. Solo aparece en errores 500: permite cruzar lo que ve ' +
-      'el cliente con la traza completa del log sin exponer detalles internos.',
     example: 'err_1c9a3f2b',
+    description:
+      'Identificador de la incidencia. **Solo aparece en los errores 500**: permite cruzar ' +
+      'lo que ve el cliente con la traza completa del log sin exponer detalles internos. ' +
+      'En el resto de los codigos el campo no viene.',
   })
   incidentId?: string;
 }

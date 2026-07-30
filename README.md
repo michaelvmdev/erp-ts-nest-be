@@ -292,6 +292,13 @@ el `500` es parte del contrato de todos por igual — y un decorador repetido se
 olvida justo en el endpoint nuevo. Si una operación declara su propio `500`, se
 respeta.
 
+Todas las respuestas de error comparten el esquema `ApiErrorDto`, así que Swagger
+mostraría el mismo ejemplo bajo el `400`, el `409` y el `500`. Para evitarlo,
+cada respuesta recibe un ejemplo propio construido con la ruta, el método y el
+código reales de esa operación: el `409` de `DELETE /products/{productId}` dice
+`PRODUCT_IN_USE`, el de `POST /clients` dice `CLIENT_DOCUMENT_ALREADY_EXISTS`, y
+`incidentId` aparece solo en el `500`, que es el único que lo lleva.
+
 ### Qué no se publica
 
 Swagger describe **el contrato de la API, no su implementación**. Nada de lo que
