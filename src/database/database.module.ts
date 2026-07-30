@@ -13,11 +13,11 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
         // getOrThrow y no get: si una variable falta, el error apunta al nombre
         // exacto en vez de fallar mas tarde dentro del driver. validateEnv ya
         // deberia haberlo cortado antes, esto es la segunda linea de defensa.
-        host: config.getOrThrow<string>('DB_HOST'),
-        port: config.getOrThrow<number>('DB_PORT'),
-        username: config.getOrThrow<string>('DB_USER'),
-        password: config.getOrThrow<string>('DB_PASSWORD'),
-        database: config.getOrThrow<string>('DB_NAME'),
+        host: config.getOrThrow<string>('POSTGRES_HOST'),
+        port: config.getOrThrow<number>('POSTGRES_PORT'),
+        username: config.getOrThrow<string>('POSTGRES_USER'),
+        password: config.getOrThrow<string>('POSTGRES_PASSWORD'),
+        database: config.getOrThrow<string>('POSTGRES_DATABASE'),
 
         // NUNCA poner esto en true. El esquema de db/db.sql esta escrito a mano
         // e incluye cosas que TypeORM no sabe representar: CHECK de formato,
@@ -34,7 +34,9 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
         // solo; no hay que mantener una lista central.
         autoLoadEntities: true,
 
-        logging: config.get<boolean>('DB_LOGGING') ? 'all' : ['error', 'warn'],
+        logging: config.get<boolean>('POSTGRES_LOGGING')
+          ? 'all'
+          : ['error', 'warn'],
 
         // Si la base todavia no esta lista al arrancar, reintenta en vez de
         // tumbar el proceso al primer intento fallido.

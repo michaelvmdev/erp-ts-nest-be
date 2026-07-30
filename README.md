@@ -368,12 +368,12 @@ Documentadas en `.env.example`.
 |---|---|---|
 | `NODE_ENV` | `development` | En `production` desactiva Swagger |
 | `PORT` | `3000` | |
-| `DB_HOST` | — | Obligatoria |
-| `DB_PORT` | `5432` | |
-| `DB_USER` | — | Obligatoria |
-| `DB_PASSWORD` | — | Obligatoria |
-| `DB_NAME` | — | Obligatoria |
-| `DB_LOGGING` | `false` | Imprime cada consulta de TypeORM |
+| `POSTGRES_HOST` | — | Obligatoria |
+| `POSTGRES_PORT` | `5432` | |
+| `POSTGRES_USER` | — | Obligatoria |
+| `POSTGRES_PASSWORD` | — | Obligatoria |
+| `POSTGRES_DATABASE` | — | Obligatoria |
+| `POSTGRES_LOGGING` | `false` | Imprime cada consulta de TypeORM |
 | `SWAGGER_ENABLED` | `true` | Solo apaga; nunca enciende en producción |
 
 Si falta una obligatoria, el proceso corta al arrancar con un mensaje que la
