@@ -50,6 +50,21 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - La descripción de marca es única ignorando mayúsculas y espacios; el alta o el
   renombrado duplicado responden 409 `BRAND_ALREADY_EXISTS`.
 
+- Módulo `sales` con la misma arquitectura. Cuatro endpoints: listado paginado
+  con filtros, consulta individual con detalle, emisión y corrección parcial.
+  La venta y sus líneas son un único agregado.
+- Los importes no se reciben nunca: el precio sale del catálogo y el backend
+  calcula parcial, subtotal, IGV y total. El precio se congela en la línea.
+- El número de comprobante se asigna reservando el correlativo de `sale_types`
+  con un `UPDATE … RETURNING` en la misma transacción que el guardado. Dos ventas
+  simultáneas obtienen números distintos, y un fallo revierte el incremento.
+- `PATCH` no permite cambiar número, fecha ni hora: son la identidad fiscal del
+  documento. Sí el cliente, el distrito y las líneas, que recalculan importes.
+- La provincia y el departamento se derivan del código de distrito, de modo que
+  las claves foráneas compuestas no pueden recibir una combinación incoherente.
+- `Money` se movió a `src/shared/domain/`: lo usan productos y ventas, y no
+  pertenece a ningún agregado. `products` lo reexporta para que exista una sola
+  clase.
 - Módulo `clients` con la misma arquitectura. Cuatro endpoints: listado paginado
   con filtros, consulta individual, alta y modificación parcial —que es donde se
   activa o desactiva—. No expone `DELETE`: la baja es lógica.
@@ -130,7 +145,10 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 
 ### Pendiente
 
-- Módulos CRUD para `clients`, el ubigeo y `sales`.
+- Módulo de consulta del ubigeo, para poblar los selectores de departamento,
+  provincia y distrito.
+- Notas de crédito, que es la vía correcta para anular o corregir una venta ya
+  emitida.
 - Las URLs de `product_image` quedan como cadena vacía.
 - Los nombres de distrito están sin tildes: la fuente del padrón no las trae.
 - Evaluar unificar `sale_date` y `sale_hour` en un solo `timestamptz`.

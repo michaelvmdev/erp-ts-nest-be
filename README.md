@@ -117,6 +117,71 @@ Swagger — ver más abajo.
 El orden es por identificador —DNI y después RUC— y no alfabético: es el orden
 que le dio el negocio.
 
+### Ventas
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/sales` | Listado paginado con filtros. Solo cabeceras |
+| `GET` | `/sales/{saleId}` | Una venta con todas sus líneas |
+| `POST` | `/sales` | Emite un comprobante |
+| `PATCH` | `/sales/{saleId}` | Corrige los datos corregibles |
+
+Filtros de `GET /sales`: `saleNumber` (exacto), `saleTypeCode`, `clientId`,
+`districtId`, `departmentId`, `dateFrom`, `dateTo`, `totalMin`, `totalMax`,
+`sortBy`, `sortDirection`, `page`, `limit`.
+
+El listado devuelve solo cabeceras, con `lineCount`; el detalle se obtiene con
+`GET /sales/{saleId}`. Veinte ventas de cinco líneas serían cien filas que una
+tabla casi nunca usa.
+
+`saleTypeCode` se resuelve como prefijo del número (`LIKE 'FAC-%'`), no como
+substring, para que pueda aprovechar el índice de `sale_number`.
+
+#### El cliente no envía importes
+
+Ni `unitPrice`, ni `partial`, ni `subTotal`, ni `igv`, ni `total`. El precio
+unitario sale del catálogo y el resto lo calcula el backend. Aceptar un total del
+cliente permitiría facturar un televisor en un sol.
+
+El `ValidationPipe` corre con `forbidNonWhitelisted`, así que enviarlos devuelve
+400 en lugar de ignorarlos en silencio.
+
+El precio se **congela** en la línea al momento de vender: una venta conserva el
+precio al que se hizo aunque el catálogo cambie después.
+
+#### El número lo asigna el backend, de forma atómica
+
+`sale_number` es la identidad fiscal del documento: el código del tipo más el
+correlativo de `sale_types`. No se recibe.
+
+Reservar el correlativo y guardar la venta son **una sola transacción**. El
+incremento se hace con un `UPDATE … RETURNING`, que toma un bloqueo de fila, así
+que dos ventas simultáneas del mismo tipo se serializan y obtienen números
+distintos. Leer con `SELECT` y escribir después dejaría una ventana en la que
+ambas leen el mismo valor y chocan contra el `UNIQUE`.
+
+Si el guardado falla, la transacción revierte también el incremento: no quedan
+huecos en la serie.
+
+#### Qué se puede corregir y qué no
+
+`PATCH` admite el cliente, el distrito y las líneas. **No** el número, la fecha
+ni la hora: son la identidad del documento y el momento de su emisión, y
+cambiarlos no sería corregir una venta sino inventar otra. En un sistema fiscal
+eso se resuelve con una nota de crédito.
+
+Si viene `saleDetails`, **reemplaza por completo** las líneas y recalcula los
+importes. No hay parche línea por línea: los importes dependen del conjunto, y
+aplicar cambios de a uno dejaría totales incoherentes a mitad de camino.
+
+#### La provincia y el departamento se derivan
+
+Solo se envía `districtId`. Los otros dos salen de sus prefijos —4 y 2 dígitos—
+garantizados por los `CHECK` del esquema. La tabla tiene claves foráneas
+compuestas, así que un cliente que enviara los tres podría mandar un distrito del
+Cusco con el departamento de Lima; derivarlos hace que esa combinación no pueda
+existir.
+
 ### Clientes
 
 | Método | Ruta | Descripción |

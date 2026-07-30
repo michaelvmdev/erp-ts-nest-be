@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { HealthModule } from './health/health.module';
 import { ProductsModule } from './products/products.module';
+import { SalesModule } from './sales/sales.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ProductsModule } from './products/products.module';
     ClientsModule,
     BrandsModule,
     ProductsModule,
+    SalesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
