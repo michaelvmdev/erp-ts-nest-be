@@ -90,6 +90,31 @@ uno donde va el otro es un error de compilación y no un bug en producción.
 
 ## Endpoints
 
+### Tipos de comprobante
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/sale-types` | Catálogo completo |
+
+Devuelve un **arreglo plano**, sin envoltorio de paginado:
+
+```json
+[
+  { "saleTypeId": 1, "saleTypeDescription": "Factura", "saleTypeCode": "FAC" },
+  { "saleTypeId": 2, "saleTypeDescription": "Boleta", "saleTypeCode": "BOL" }
+]
+```
+
+El `saleTypeCode` es el prefijo con el que se numeran las ventas de ese tipo, y
+`saleTypeId` es el valor que se envía al registrar una venta.
+
+No se incluye el último número emitido de cada serie: es un dato interno de
+facturación, no información del catálogo, y revelaría el volumen de operaciones
+a cualquiera que consulte la API.
+
+Es un catálogo fijo, del mismo estilo que tipos de documento: de solo lectura,
+arreglo plano y sin paginado.
+
 ### Tipos de documento
 
 | Método | Ruta | Descripción |
@@ -317,11 +342,13 @@ pueda pedir el catálogo entero de una sola vez.
 | Código | Cuándo |
 |---|---|
 | `200` | Consulta resuelta, o modificación aplicada |
-| `201` | Producto creado |
+| `201` | Recurso creado (producto, marca, cliente o venta) |
 | `204` | Producto eliminado. Sin cuerpo |
-| `400` | Validación del cuerpo, UUID mal formado, rango de precio invertido |
-| `404` | El producto o la marca no existen |
-| `409` | El producto está referenciado por ventas registradas |
+| `400` | Validación del cuerpo, UUID mal formado, rango de precio invertido, documento inválido |
+| `404` | El recurso solicitado no existe |
+| `409` | Conflicto: duplicado, recurso en uso, cliente o producto inactivo, serie agotada |
+| `422` | Error de dominio que no entra en las categorías anteriores |
+| `503` | `GET /health/db` cuando la base no responde |
 | `500` | Fallo no previsto |
 
 Todos los errores comparten la misma forma:
@@ -338,14 +365,15 @@ Todos los errores comparten la misma forma:
 ```
 
 `code` es el contrato estable: el cliente debe ramificar sobre él y no sobre el
-texto de `message`, que puede reescribirse. Los códigos actuales son
-`PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CLIENT_NOT_FOUND`,
-`DOCUMENT_TYPE_NOT_FOUND`, `PRODUCT_IN_USE`, `BRAND_ALREADY_EXISTS`,
-`CLIENT_DOCUMENT_ALREADY_EXISTS`, `VALIDATION_ERROR`, `INVALID_UUID`,
-`INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`,
-`INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`,
-`INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`,
-`INVALID_DOCUMENT_TYPE_ID` e `INTERNAL_ERROR`.
+texto de `message`, que puede reescribirse. Los códigos actuales son:
+
+| Categoría | Códigos |
+|---|---|
+| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND` |
+| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
+| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER` |
+| Dominio genérico (422) | `INVALID_SALE`, `UNPROCESSABLE_ENTITY` |
+| Infraestructura | `SERVICE_UNAVAILABLE` (503), `INTERNAL_ERROR` (500) |
 
 En un `500` se agrega un `incidentId`. El detalle real queda en el log del
 servidor: al cliente no se le filtran trazas ni mensajes del driver.
@@ -449,16 +477,23 @@ nombra, en vez de fallar más tarde con un error ilegible del driver.
 | Comando | |
 |---|---|
 | `npm run start:dev` | Desarrollo con recarga |
+| `npm run start:debug` | Desarrollo con recarga y depurador |
 | `npm run build` | Compila a `dist/` |
 | `npm run start:prod` | Ejecuta lo compilado |
+| `npm run format` | Prettier sobre `src/` y `test/` |
 | `npm run lint` | ESLint con `--fix` |
 | `npm test` | Tests unitarios |
+| `npm run test:watch` | Tests en modo interactivo |
+| `npm run test:cov` | Tests con cobertura |
 | `npm run test:e2e` | Tests de extremo a extremo (requiere la base) |
 
 ## Imagen de reemplazo
 
 `product_image` puede ser `null`. En ese caso el frontend debe usar
 `public/img/product-placeholder.svg`, que se adapta a tema claro y oscuro.
+
+El archivo es un asset del repositorio; la API no sirve archivos estáticos. El
+frontend debe copiarlo a su propio bundle o referenciarlo desde sus assets.
 
 La ruta del placeholder no se guarda en la base a propósito: mezclaría "no tiene
 imagen" con "tiene esta imagen" y después no habría forma de saber cuáles quedan

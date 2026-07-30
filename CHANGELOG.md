@@ -76,6 +76,11 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - Módulo `document-types` con un único endpoint `GET /document-types`, que
   devuelve el catálogo completo como arreglo plano. Es de solo lectura: el
   agregado no expone `create` porque las filas las siembra `db/db.sql`.
+- Módulo `sale-types` con un único endpoint `GET /sale-types`, que devuelve el
+  catálogo de tipos de comprobante como arreglo plano. Mismo criterio que
+  `document-types`: catálogo fijo, de solo lectura, sin paginado. El
+  correlativo de cada serie no se expone: es un dato interno de facturación y
+  revelaría el volumen de operaciones.
 - Tablas `document_types` y `sale_types` con sus datos de referencia, y las
   columnas `document_type_id` y `document_number` en `clients` con su clave
   foránea, restricción de formato y unicidad del documento.
@@ -152,5 +157,10 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 - Las URLs de `product_image` quedan como cadena vacía.
 - Los nombres de distrito están sin tildes: la fuente del padrón no las trae.
 - Evaluar unificar `sale_date` y `sale_hour` en un solo `timestamptz`.
+- `error-examples.ts` no tiene entrada para el recurso `sales`: el 404 y el 409
+  de ventas se documentan en Swagger con ejemplos genéricos en vez de con sus
+  códigos reales (`SALE_NOT_FOUND`, `CLIENT_INACTIVE`, etc.).
+- Servir `public/` como archivos estáticos, o mover el placeholder al frontend.
+  Hoy el SVG es un asset del repo que no es alcanzable por HTTP.
 
 [Sin publicar]: https://github.com/michaelvargas7/crud-ts-nest-be
