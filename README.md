@@ -142,6 +142,33 @@ Swagger — ver más abajo.
 El orden es por identificador —DNI y después RUC— y no alfabético: es el orden
 que le dio el negocio.
 
+### Ubigeo
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/ubigeo/departments` | Los 25 departamentos |
+| `GET` | `/ubigeo/departments/{departmentId}/provinces` | Provincias de un departamento |
+| `GET` | `/ubigeo/provinces/{provinceId}/districts` | Distritos de una provincia |
+
+Los tres niveles cuelgan de un mismo recurso porque son un único concepto
+jerárquico: un departamento tiene provincias y una provincia tiene distritos.
+Están pensados para poblar **selectores en cascada** —se elige un departamento,
+eso carga sus provincias, y esas su distrito—, hasta llegar al `districtId` que
+después recibe `POST /sales`.
+
+Cada nivel devuelve un **arreglo plano**, sin paginado, como los demás
+catálogos. El orden es alfabético por nombre, que es como mejor se leen en un
+desplegable.
+
+Los códigos son los del padrón INEI, con ceros a la izquierda: 2 dígitos el
+departamento, 4 la provincia, 6 el distrito. El de cada hijo empieza con el de
+su padre —`1501` es una provincia del departamento `15`—, así que el propio
+código dice a qué pertenece.
+
+Las rutas anidan esa relación a propósito. Un `departmentId` con formato
+inválido responde 400; uno bien formado que no existe responde 404, en vez de un
+arreglo vacío que escondería un código mal escrito.
+
 ### Ventas
 
 | Método | Ruta | Descripción |
@@ -369,9 +396,9 @@ texto de `message`, que puede reescribirse. Los códigos actuales son:
 
 | Categoría | Códigos |
 |---|---|
-| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND` |
+| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND` |
 | Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
-| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER` |
+| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA` |
 | Dominio genérico (422) | `INVALID_SALE`, `UNPROCESSABLE_ENTITY` |
 | Infraestructura | `SERVICE_UNAVAILABLE` (503), `INTERNAL_ERROR` (500) |
 
@@ -486,15 +513,3 @@ nombra, en vez de fallar más tarde con un error ilegible del driver.
 | `npm run test:watch` | Tests en modo interactivo |
 | `npm run test:cov` | Tests con cobertura |
 | `npm run test:e2e` | Tests de extremo a extremo (requiere la base) |
-
-## Imagen de reemplazo
-
-`product_image` puede ser `null`. En ese caso el frontend debe usar
-`public/img/product-placeholder.svg`, que se adapta a tema claro y oscuro.
-
-El archivo es un asset del repositorio; la API no sirve archivos estáticos. El
-frontend debe copiarlo a su propio bundle o referenciarlo desde sus assets.
-
-La ruta del placeholder no se guarda en la base a propósito: mezclaría "no tiene
-imagen" con "tiene esta imagen" y después no habría forma de saber cuáles quedan
-por cargar.

@@ -17,8 +17,6 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   y `/docs-yaml`. **Solo fuera de producción**: con `NODE_ENV=production` las
   rutas ni siquiera se registran y responden 404. Se puede apagar en desarrollo
   con `SWAGGER_ENABLED=false`.
-- Imagen de reemplazo para productos sin foto en
-  `public/img/product-placeholder.svg` (SVG, se adapta a tema claro y oscuro).
 - Conexión a PostgreSQL con TypeORM, configurada por variables de entorno
   mediante `@nestjs/config`. `synchronize` queda desactivado: el esquema es el
   de `db/db.sql` y lo gobierna el SQL, no las entidades.
@@ -81,6 +79,18 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   `document-types`: catálogo fijo, de solo lectura, sin paginado. El
   correlativo de cada serie no se expone: es un dato interno de facturación y
   revelaría el volumen de operaciones.
+- Módulo `ubigeo` con la consulta del padrón en tres niveles bajo un mismo
+  recurso: `GET /ubigeo/departments`,
+  `GET /ubigeo/departments/{departmentId}/provinces` y
+  `GET /ubigeo/provinces/{provinceId}/districts`. Están pensados para poblar
+  selectores en cascada hasta el `districtId` que recibe `POST /sales`.
+  Departamentos, provincias y distritos son un mismo concepto jerárquico, así
+  que van en un solo módulo y no en tres. De solo lectura, arreglo plano y sin
+  paginado, como los demás catálogos.
+- Las rutas del ubigeo anidan la jerarquía: un código de padre mal formado
+  responde 400 y uno inexistente 404, en vez de un arreglo vacío que escondería
+  el error. La coherencia de prefijos —el código del hijo empieza con el del
+  padre— se verifica también al rehidratar el dominio.
 - Tablas `document_types` y `sale_types` con sus datos de referencia, y las
   columnas `document_type_id` y `document_number` en `clients` con su clave
   foránea, restricción de formato y unicidad del documento.
@@ -150,8 +160,6 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 
 ### Pendiente
 
-- Módulo de consulta del ubigeo, para poblar los selectores de departamento,
-  provincia y distrito.
 - Notas de crédito, que es la vía correcta para anular o corregir una venta ya
   emitida.
 - Las URLs de `product_image` quedan como cadena vacía.
@@ -160,7 +168,5 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 - `error-examples.ts` no tiene entrada para el recurso `sales`: el 404 y el 409
   de ventas se documentan en Swagger con ejemplos genéricos en vez de con sus
   códigos reales (`SALE_NOT_FOUND`, `CLIENT_INACTIVE`, etc.).
-- Servir `public/` como archivos estáticos, o mover el placeholder al frontend.
-  Hoy el SVG es un asset del repo que no es alcanzable por HTTP.
 
 [Sin publicar]: https://github.com/michaelvargas7/crud-ts-nest-be
