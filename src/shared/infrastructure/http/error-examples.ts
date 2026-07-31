@@ -125,6 +125,12 @@ function codigoYMensaje(status: number, ruta: string): CodigoYMensaje {
         message: 'La peticion es valida pero no se puede procesar.',
       };
 
+    case 429:
+      return {
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Demasiadas peticiones. Espera unos segundos y vuelve a intentar.',
+      };
+
     case 503:
       return {
         code: 'SERVICE_UNAVAILABLE',

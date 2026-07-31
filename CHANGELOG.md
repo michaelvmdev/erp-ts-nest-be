@@ -40,6 +40,13 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - `message` se documenta como `string` o lista de `string`, que es lo que
   realmente devuelve según venga del dominio o de la validación del cuerpo.
 - `ValidationPipe` global que rechaza campos no declarados en los DTOs.
+- Rate-limiting con `@nestjs/throttler`: 100 peticiones por IP y por endpoint
+  cada 60 segundos por defecto, configurable con `THROTTLE_TTL` y
+  `THROTTLE_LIMIT`. Se aplica con un guard global —no un decorador por
+  controlador—, y al superarse responde 429 `TOO_MANY_REQUESTS` en el formato de
+  error unificado. El 429 se inyecta en todas las operaciones de Swagger, igual
+  que el 500. `GET /health/db` queda exento con `@SkipThrottle` para no
+  interferir con las sondas de salud.
 - Módulo `brands` con la misma arquitectura que `products`. Cuatro endpoints:
   listado paginado con filtros por query string, consulta individual, alta y
   modificación parcial. No expone `DELETE`: la baja es lógica.
@@ -168,5 +175,8 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 - `error-examples.ts` no tiene entrada para el recurso `sales`: el 404 y el 409
   de ventas se documentan en Swagger con ejemplos genéricos en vez de con sus
   códigos reales (`SALE_NOT_FOUND`, `CLIENT_INACTIVE`, etc.).
+- El rate-limiting cuenta en memoria de cada proceso: detrás de un balanceador
+  con varias réplicas el límite efectivo se multiplica. Para un límite
+  compartido haría falta un almacén común (Redis), aún sin configurar.
 
 [Sin publicar]: https://github.com/michaelvargas7/crud-ts-nest-be

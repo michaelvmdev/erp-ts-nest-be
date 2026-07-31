@@ -10,10 +10,14 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import { ApiErrorDto } from '../shared/infrastructure/http/api-error.dto';
 import { HealthResponseDto } from './health.response.dto';
 
+// Exento del rate-limiting: las sondas de salud de un balanceador consultan esta
+// ruta con frecuencia, y limitarla haria que el propio chequeo dispare el 429.
+@SkipThrottle()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

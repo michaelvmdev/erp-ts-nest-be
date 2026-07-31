@@ -15,6 +15,8 @@ export interface EnvVars {
   POSTGRES_PASSWORD: string;
   POSTGRES_DATABASE: string;
   POSTGRES_LOGGING: boolean;
+  THROTTLE_TTL: number;
+  THROTTLE_LIMIT: number;
 }
 
 const REQUERIDAS = [
@@ -55,6 +57,23 @@ function toBool(valor: unknown, porDefecto = false): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw);
 }
 
+/** Entero >= 1 con valor por defecto. Usado por la config del rate-limiting. */
+function toPositiveInt(
+  valor: unknown,
+  porDefecto: number,
+  nombre: string,
+): number {
+  const raw = asString(valor).trim();
+  if (raw === '') return porDefecto;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(
+      `${nombre} debe ser un entero positivo, se recibio "${raw}"`,
+    );
+  }
+  return n;
+}
+
 export function validateEnv(config: Record<string, unknown>): EnvVars {
   const faltantes = REQUERIDAS.filter(
     (clave) => asString(config[clave]).trim() === '',
@@ -78,5 +97,7 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     POSTGRES_PASSWORD: asString(config.POSTGRES_PASSWORD),
     POSTGRES_DATABASE: asString(config.POSTGRES_DATABASE),
     POSTGRES_LOGGING: toBool(config.POSTGRES_LOGGING),
+    THROTTLE_TTL: toPositiveInt(config.THROTTLE_TTL, 60, 'THROTTLE_TTL'),
+    THROTTLE_LIMIT: toPositiveInt(config.THROTTLE_LIMIT, 100, 'THROTTLE_LIMIT'),
   };
 }

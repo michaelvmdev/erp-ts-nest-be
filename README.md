@@ -375,6 +375,7 @@ pueda pedir el catálogo entero de una sola vez.
 | `404` | El recurso solicitado no existe |
 | `409` | Conflicto: duplicado, recurso en uso, cliente o producto inactivo, serie agotada |
 | `422` | Error de dominio que no entra en las categorías anteriores |
+| `429` | Se superó el límite de peticiones (rate-limiting) |
 | `503` | `GET /health/db` cuando la base no responde |
 | `500` | Fallo no previsto |
 
@@ -400,6 +401,7 @@ texto de `message`, que puede reescribirse. Los códigos actuales son:
 | Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
 | Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA` |
 | Dominio genérico (422) | `INVALID_SALE`, `UNPROCESSABLE_ENTITY` |
+| Límite de peticiones (429) | `TOO_MANY_REQUESTS` |
 | Infraestructura | `SERVICE_UNAVAILABLE` (503), `INTERNAL_ERROR` (500) |
 
 En un `500` se agrega un `incidentId`. El detalle real queda en el log del
@@ -454,6 +456,35 @@ Omitir un campo y enviarlo en `null` son cosas distintas. Omitir
 borra. El caso de uso compara contra `undefined` y no por veracidad, para que
 `null`, `false` y `0` se apliquen como los valores legítimos que son.
 
+## Rate-limiting
+
+La API limita las peticiones con `@nestjs/throttler`. Por defecto son
+**100 peticiones cada 60 segundos, por IP y por endpoint**; ambos números se
+configuran con `THROTTLE_TTL` y `THROTTLE_LIMIT`. Al superar el límite responde
+`429` con el mismo formato de error que el resto, con
+`code: "TOO_MANY_REQUESTS"`.
+
+El conteo es **por combinación de IP y endpoint** —el comportamiento por defecto
+de la librería—: agotar el cupo de `GET /sales` no afecta a `POST /clients`. Es
+protección contra el martilleo de una ruta concreta, no un presupuesto global de
+peticiones por cliente.
+
+El límite se aplica con un **guard global**, no con un decorador por controlador:
+igual que el `500`, es parte del contrato de todos los endpoints por igual, y un
+decorador repetido se olvida justo en el endpoint nuevo. Por eso el `429` también
+se documenta en Swagger en todas las operaciones.
+
+`GET /health/db` queda **exento**: las sondas de salud de un balanceador
+consultan esa ruta con frecuencia, y limitarla haría que el propio chequeo
+dispare el `429`.
+
+El conteo se guarda **en memoria del proceso**, así que cada instancia lleva el
+suyo. Detrás de un balanceador con varias réplicas, el límite efectivo se
+multiplica por el número de instancias; para un límite compartido haría falta un
+almacén común (por ejemplo Redis), que hoy no está configurado. La IP la toma de
+la conexión: detrás de un proxy inverso hay que configurar `trust proxy` para no
+contar a todos los clientes bajo la IP del proxy.
+
 ## Base de datos
 
 El esquema vive en `db/` y **lo gobierna el SQL, no las entidades**. Por eso
@@ -494,6 +525,8 @@ Documentadas en `.env.example`.
 | `POSTGRES_PASSWORD` | — | Obligatoria |
 | `POSTGRES_DATABASE` | — | Obligatoria |
 | `POSTGRES_LOGGING` | `false` | Imprime cada consulta de TypeORM |
+| `THROTTLE_TTL` | `60` | Ventana del rate-limiting, en segundos |
+| `THROTTLE_LIMIT` | `100` | Peticiones por IP y por endpoint en esa ventana |
 | `SWAGGER_ENABLED` | `true` | Solo apaga; nunca enciende en producción |
 
 Si falta una obligatoria, el proceso corta al arrancar con un mensaje que la

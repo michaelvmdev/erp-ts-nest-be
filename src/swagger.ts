@@ -84,6 +84,44 @@ function documentarErrorInterno(document: OpenAPIObject): OpenAPIObject {
 }
 
 /**
+ * Declara la respuesta 429 en toda operacion que no la traiga ya.
+ *
+ * El rate-limiting es global —un guard sobre todos los endpoints—, asi que el
+ * 429 forma parte del contrato de todos por igual, con el mismo criterio que el
+ * 500: se inyecta aqui y no con un decorador por controlador que se olvidaria en
+ * el endpoint nuevo. Las operaciones exentas con `@SkipThrottle` igual lo
+ * declaran; documentarlo de mas es inocuo y evita razonar sobre que rutas quedan
+ * fuera.
+ */
+function documentarLimiteDePeticiones(document: OpenAPIObject): OpenAPIObject {
+  const nuevaRespuesta = () => ({
+    description:
+      'Se supero el limite de peticiones permitido en la ventana de tiempo. El cliente ' +
+      'debe espaciar sus llamadas antes de reintentar.',
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorDto) },
+      },
+    },
+  });
+
+  for (const item of Object.values(document.paths)) {
+    for (const metodo of METODOS_HTTP) {
+      const operacion = item[metodo];
+      if (!operacion) {
+        continue;
+      }
+      if (operacion.responses?.['429']) {
+        continue;
+      }
+      operacion.responses = { ...operacion.responses, '429': nuevaRespuesta() };
+    }
+  }
+
+  return document;
+}
+
+/**
  * Pone un ejemplo propio en cada respuesta de error.
  *
  * Todas comparten el esquema ApiErrorDto, asi que Swagger muestra por defecto el
@@ -147,18 +185,20 @@ export function setupSwagger(app: INestApplication): void {
 
   // Factory en vez de documento ya construido: Nest 11 lo genera al primer
   // request en lugar de en el arranque, y asi no penaliza el tiempo de inicio.
-  // El orden importa: primero se agrega el 500 a todas las operaciones y despues
-  // se ejemplifican los errores, para que el 500 recien inyectado tambien reciba
-  // su ejemplo.
+  // El orden importa: primero se agregan el 500 y el 429 a todas las operaciones
+  // y despues se ejemplifican los errores, para que las respuestas recien
+  // inyectadas tambien reciban su ejemplo.
   const documentFactory = () =>
     ejemplificarErrores(
-      documentarErrorInterno(
-        // extraModels garantiza que ApiErrorDto quede en components aunque ningun
-        // endpoint lo referencie explicitamente: la respuesta 500 que se inyecta
-        // apunta a el por $ref.
-        SwaggerModule.createDocument(app, config, {
-          extraModels: [ApiErrorDto],
-        }),
+      documentarLimiteDePeticiones(
+        documentarErrorInterno(
+          // extraModels garantiza que ApiErrorDto quede en components aunque
+          // ningun endpoint lo referencie explicitamente: las respuestas 429 y
+          // 500 que se inyectan apuntan a el por $ref.
+          SwaggerModule.createDocument(app, config, {
+            extraModels: [ApiErrorDto],
+          }),
+        ),
       ),
     );
 

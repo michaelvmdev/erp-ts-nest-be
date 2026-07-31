@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
@@ -23,6 +25,21 @@ import { UbigeoModule } from './ubigeo/ubigeo.module';
       // Corta el arranque si falta o esta mal una variable obligatoria.
       validate: validateEnv,
     }),
+    // Rate-limiting global. El TTL de la config de throttler va en milisegundos;
+    // THROTTLE_TTL se expresa en segundos por ser mas legible en el .env.
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: config.getOrThrow<number>('THROTTLE_TTL') * 1000,
+            limit: config.getOrThrow<number>('THROTTLE_LIMIT'),
+          },
+        ],
+        errorMessage:
+          'Demasiadas peticiones. Espera unos segundos y vuelve a intentar.',
+      }),
+    }),
     DatabaseModule,
     HealthModule,
     DocumentTypesModule,
@@ -34,6 +51,11 @@ import { UbigeoModule } from './ubigeo/ubigeo.module';
     UbigeoModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Guard global: el rate-limiting aplica a todos los endpoints por igual, sin
+    // un decorador por controlador que se olvide justo en el endpoint nuevo.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
