@@ -1,6 +1,7 @@
 import { Product } from '../../domain/product';
 import {
   BrandId,
+  CategoryId,
   ProductId,
 } from '../../domain/value-objects/identifiers.value-object';
 import { Money } from '../../domain/value-objects/money.value-object';
@@ -22,6 +23,7 @@ export class ProductMapper {
     return Product.rehydrate({
       id: ProductId.of(row.productId),
       brandId: BrandId.of(row.brandId),
+      categoryId: CategoryId.of(row.categoryId),
       name: ProductName.of(row.productName),
       description: ProductDescription.of(row.productDescription),
       image: ProductImage.of(row.productImage),
@@ -37,6 +39,7 @@ export class ProductMapper {
     const row = new ProductOrmEntity();
     row.productId = snapshot.id;
     row.brandId = snapshot.brandId;
+    row.categoryId = snapshot.categoryId;
     row.productName = snapshot.name;
     row.productDescription = snapshot.description;
     row.productImage = snapshot.image;

@@ -12,6 +12,7 @@
 
 export interface CreateProductCommand {
   readonly brandId: string;
+  readonly categoryId: string;
   readonly productName: string;
   readonly productDescription?: string | null;
   readonly productImage?: string | null;
@@ -21,6 +22,7 @@ export interface CreateProductCommand {
 
 export interface UpdateProductCommand {
   readonly brandId?: string;
+  readonly categoryId?: string;
   readonly productName?: string;
   readonly productDescription?: string | null;
   readonly productImage?: string | null;

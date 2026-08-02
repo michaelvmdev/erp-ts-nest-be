@@ -7,11 +7,14 @@ import { SearchProductsUseCase } from './application/search-products.use-case';
 import { UpdateProductUseCase } from './application/update-product.use-case';
 import {
   BRAND_EXISTENCE_CHECKER,
+  CATEGORY_EXISTENCE_CHECKER,
   PRODUCT_REPOSITORY,
 } from './domain/product.repository';
 import { BrandOrmEntity } from '../brands/infrastructure/persistence/brand.orm-entity';
+import { CategoryOrmEntity } from '../categories/infrastructure/persistence/category.orm-entity';
 import { ProductsController } from './infrastructure/http/products.controller';
 import { ProductOrmEntity } from './infrastructure/persistence/product.orm-entity';
+import { TypeOrmCategoryExistenceChecker } from './infrastructure/persistence/typeorm-category-existence.checker';
 import { TypeOrmProductRepository } from './infrastructure/persistence/typeorm-product.repository';
 
 /**
@@ -24,7 +27,13 @@ import { TypeOrmProductRepository } from './infrastructure/persistence/typeorm-p
  * aplicacion se enteran.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([ProductOrmEntity, BrandOrmEntity])],
+  imports: [
+    TypeOrmModule.forFeature([
+      ProductOrmEntity,
+      BrandOrmEntity,
+      CategoryOrmEntity,
+    ]),
+  ],
   controllers: [ProductsController],
   providers: [
     TypeOrmProductRepository,
@@ -32,6 +41,13 @@ import { TypeOrmProductRepository } from './infrastructure/persistence/typeorm-p
     // useExisting y no useClass: el mismo adaptador implementa los dos puertos,
     // asi que debe compartirse la instancia en lugar de crear una por token.
     { provide: BRAND_EXISTENCE_CHECKER, useExisting: TypeOrmProductRepository },
+    // La comprobacion de categoria va en su propio adaptador: no puede compartir
+    // el metodo `exists` de la marca porque el tipo del argumento difiere.
+    TypeOrmCategoryExistenceChecker,
+    {
+      provide: CATEGORY_EXISTENCE_CHECKER,
+      useExisting: TypeOrmCategoryExistenceChecker,
+    },
     FindProductUseCase,
     SearchProductsUseCase,
     CreateProductUseCase,

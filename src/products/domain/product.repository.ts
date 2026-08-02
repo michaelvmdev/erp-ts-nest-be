@@ -1,7 +1,11 @@
 import { Page } from '../../shared/domain/pagination';
 import { Product } from './product';
 import { ProductSearchCriteria } from './product-search.criteria';
-import { BrandId, ProductId } from './value-objects/identifiers.value-object';
+import {
+  BrandId,
+  CategoryId,
+  ProductId,
+} from './value-objects/identifiers.value-object';
 
 /**
  * Puerto de salida del agregado Producto.
@@ -44,8 +48,20 @@ export interface BrandExistenceChecker {
 }
 
 /**
+ * Puerto para verificar que una categoria existe antes de asociarla.
+ *
+ * Va aparte del repositorio de productos porque Categoria es otro agregado. El
+ * dominio de productos solo necesita saber si un CategoryId es valido, no
+ * manejar categorias: este puerto expresa exactamente esa necesidad y nada mas.
+ */
+export interface CategoryExistenceChecker {
+  exists(categoryId: CategoryId): Promise<boolean>;
+}
+
+/**
  * Tokens de inyeccion. Hacen falta porque una interfaz de TypeScript no existe
  * en tiempo de ejecucion y Nest no puede usarla como identificador de provider.
  */
 export const PRODUCT_REPOSITORY = Symbol('ProductRepository');
 export const BRAND_EXISTENCE_CHECKER = Symbol('BrandExistenceChecker');
+export const CATEGORY_EXISTENCE_CHECKER = Symbol('CategoryExistenceChecker');

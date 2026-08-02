@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
 import { BrandsModule } from './brands/brands.module';
+import { CategoriesModule } from './categories/categories.module';
 import { ClientsModule } from './clients/clients.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DatabaseModule } from './database/database.module';
@@ -46,6 +47,7 @@ import { UbigeoModule } from './ubigeo/ubigeo.module';
     DocumentTypesModule,
     ClientsModule,
     BrandsModule,
+    CategoriesModule,
     ProductsModule,
     SaleTypesModule,
     SalesModule,
