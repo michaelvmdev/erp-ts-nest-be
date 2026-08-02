@@ -1,13 +1,28 @@
-import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
+import { GetMonthlySalesUseCase } from '../../application/get-monthly-sales.use-case';
+import { GetMonthlySalesByCategoryUseCase } from '../../application/get-monthly-sales-by-category.use-case';
+import { GetMonthlySalesByUbigeoUseCase } from '../../application/get-monthly-sales-by-ubigeo.use-case';
 import { GetTopClientUseCase } from '../../application/get-top-client.use-case';
 import { GetTopDepartmentUseCase } from '../../application/get-top-department.use-case';
 import { GetTopProductUseCase } from '../../application/get-top-product.use-case';
+import { GetTopProductByMonthUseCase } from '../../application/get-top-product-by-month.use-case';
 import { GetTotalSalesUseCase } from '../../application/get-total-sales.use-case';
+import { MonthlySalesByCategoryQueryDto } from './dto/monthly-sales-by-category.query.dto';
+import { MonthlySalesByUbigeoQueryDto } from './dto/monthly-sales-by-ubigeo.query.dto';
+import { MonthlySalesResponseDto } from './dto/monthly-sales.response.dto';
 import { TopClientResponseDto } from './dto/top-client.response.dto';
 import { TopDepartmentResponseDto } from './dto/top-department.response.dto';
+import { TopProductByMonthResponseDto } from './dto/top-product-by-month.response.dto';
 import { TopProductResponseDto } from './dto/top-product.response.dto';
 import { TotalSalesResponseDto } from './dto/total-sales.response.dto';
+import { YearQueryDto } from './dto/year.query.dto';
 
 /**
  * Indicadores del mes actual para el tablero del front.
@@ -25,6 +40,10 @@ export class DashboardController {
     private readonly getTopProduct: GetTopProductUseCase,
     private readonly getTopDepartment: GetTopDepartmentUseCase,
     private readonly getTopClient: GetTopClientUseCase,
+    private readonly getMonthlySales: GetMonthlySalesUseCase,
+    private readonly getMonthlySalesByUbigeo: GetMonthlySalesByUbigeoUseCase,
+    private readonly getMonthlySalesByCategory: GetMonthlySalesByCategoryUseCase,
+    private readonly getTopProductByMonth: GetTopProductByMonthUseCase,
   ) {}
 
   @Get('total-sales')
@@ -88,5 +107,112 @@ export class DashboardController {
   async topClient(): Promise<TopClientResponseDto | null> {
     const m = await this.getTopClient.execute();
     return m ? TopClientResponseDto.fromReadModel(m) : null;
+  }
+
+  // --- Diagramas anuales para el front ---
+  //
+  // Cada uno devuelve una serie de los 12 meses del ano indicado. Los meses sin
+  // ventas vienen igual, con total en cero, para que el eje del grafico quede
+  // completo sin que el front tenga que rellenar huecos.
+
+  @Get('monthly-sales')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Ventas mensuales del ano',
+    description:
+      'Suma de los totales de venta por mes para el ano indicado. Diagrama ' +
+      '"Ventas Mensuales del Ano YYYY": [month, total].',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el total de cada uno.',
+    type: MonthlySalesResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano falta o esta fuera de rango.',
+    type: ApiErrorDto,
+  })
+  async monthlySales(
+    @Query() query: YearQueryDto,
+  ): Promise<MonthlySalesResponseDto> {
+    const rows = await this.getMonthlySales.execute(query.year);
+    return MonthlySalesResponseDto.build(query.year, rows);
+  }
+
+  @Get('monthly-sales-by-ubigeo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Ventas mensuales por localidad (ubigeo) del ano',
+    description:
+      'Suma de los totales de venta por mes, filtrando por localidad. ' +
+      '`departmentId` es obligatorio; `provinceId` y `districtId` permiten ' +
+      'afinar el filtro. Diagrama "Ventas Totales por Localidad del Ano YYYY".',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el total de la localidad en cada uno.',
+    type: MonthlySalesResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano o algun codigo de ubigeo es invalido.',
+    type: ApiErrorDto,
+  })
+  async monthlySalesByUbigeo(
+    @Query() query: MonthlySalesByUbigeoQueryDto,
+  ): Promise<MonthlySalesResponseDto> {
+    const rows = await this.getMonthlySalesByUbigeo.execute(query.year, {
+      departmentId: query.departmentId,
+      provinceId: query.provinceId,
+      districtId: query.districtId,
+    });
+    return MonthlySalesResponseDto.build(query.year, rows);
+  }
+
+  @Get('monthly-sales-by-category')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Ventas mensuales por categoria del ano',
+    description:
+      'Suma de los importes de linea (sale_details) por mes para los productos ' +
+      'de la categoria indicada. Diagrama "Ventas Totales por Categoria del Ano YYYY".',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el total de la categoria en cada uno.',
+    type: MonthlySalesResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano o el categoryId es invalido.',
+    type: ApiErrorDto,
+  })
+  async monthlySalesByCategory(
+    @Query() query: MonthlySalesByCategoryQueryDto,
+  ): Promise<MonthlySalesResponseDto> {
+    const rows = await this.getMonthlySalesByCategory.execute(
+      query.year,
+      query.categoryId,
+    );
+    return MonthlySalesResponseDto.build(query.year, rows);
+  }
+
+  @Get('top-product-by-month')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Producto mas vendido por mes del ano',
+    description:
+      'Producto con mas unidades vendidas en cada mes del ano. Diagrama ' +
+      '"Producto mas vendido por Mes del Ano YYYY": [month, productDescription]. ' +
+      'Los meses sin ventas traen el producto en null.',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el producto lider de cada uno.',
+    type: TopProductByMonthResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano falta o esta fuera de rango.',
+    type: ApiErrorDto,
+  })
+  async topProductByMonth(
+    @Query() query: YearQueryDto,
+  ): Promise<TopProductByMonthResponseDto> {
+    const rows = await this.getTopProductByMonth.execute(query.year);
+    return TopProductByMonthResponseDto.build(query.year, rows);
   }
 }
