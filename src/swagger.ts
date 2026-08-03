@@ -5,11 +5,15 @@ import {
   SwaggerModule,
   getSchemaPath,
 } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { ApiErrorDto } from './shared/infrastructure/http/api-error.dto';
 import { ejemploDeError } from './shared/infrastructure/http/error-examples';
 
-/** Ruta donde se monta la UI. El JSON queda en `${SWAGGER_PATH}-json`. */
+/** Ruta donde se monta la UI de Swagger. El JSON queda en `${SWAGGER_PATH}-json`. */
 export const SWAGGER_PATH = 'docs';
+
+/** Ruta donde se monta la UI de Scalar. */
+export const SCALAR_PATH = 'reference';
 
 /**
  * Decide si la documentacion debe publicarse.
@@ -214,4 +218,49 @@ export function setupSwagger(app: INestApplication): void {
   });
 
   Logger.log(`Documentacion disponible en /${SWAGGER_PATH}`, 'Swagger');
+}
+
+/**
+ * Pagina HTML que embebe la UI de Scalar mediante su bundle standalone.
+ *
+ * Se sirve esta pagina en vez de usar `@scalar/nestjs-api-reference`: ese paquete
+ * solo se distribuye como ESM (su build CJS hace `require` de una dependencia
+ * ESM-only y revienta al arrancar bajo CommonJS, que es como corre este proyecto).
+ * El embed por CDN es la integracion oficial y no arrastra ese problema.
+ *
+ * El `data-url` apunta al mismo JSON que publica SwaggerModule, asi que Scalar
+ * hereda todos los endpoints y los enriquecidos (respuestas 429/500 y ejemplos).
+ */
+function paginaScalar(): string {
+  return `<!doctype html>
+<html>
+  <head>
+    <title>dbSales API — reference</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>body { margin: 0; }</style>
+  </head>
+  <body>
+    <script id="api-reference" data-url="/${SWAGGER_PATH}-json"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  </body>
+</html>`;
+}
+
+/**
+ * Monta la UI de Scalar como alternativa a Swagger UI.
+ *
+ * No genera un segundo documento: reutiliza el `${SWAGGER_PATH}-json` que ya
+ * publica SwaggerModule, por lo que debe llamarse despues de setupSwagger.
+ *
+ * Queda bajo la misma condicion que Swagger (`isSwaggerEnabled`): en produccion
+ * no se publica ninguna de las dos.
+ */
+export function setupScalar(app: INestApplication): void {
+  const html = paginaScalar();
+  app.use(`/${SCALAR_PATH}`, (_req: Request, res: Response) => {
+    res.type('html').send(html);
+  });
+
+  Logger.log(`Documentacion (Scalar) disponible en /${SCALAR_PATH}`, 'Scalar');
 }
