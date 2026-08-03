@@ -17,6 +17,14 @@ export interface EnvVars {
   POSTGRES_LOGGING: boolean;
   THROTTLE_TTL: number;
   THROTTLE_LIMIT: number;
+  // Correo saliente (SMTP). Opcional: la app arranca sin esto, pero el envio de
+  // comprobantes por correo falla con un mensaje claro hasta que se configure.
+  MAIL_HOST: string;
+  MAIL_PORT: number;
+  MAIL_SECURE: boolean;
+  MAIL_USER: string;
+  MAIL_PASSWORD: string;
+  MAIL_FROM: string;
 }
 
 const REQUERIDAS = [
@@ -99,5 +107,13 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     POSTGRES_LOGGING: toBool(config.POSTGRES_LOGGING),
     THROTTLE_TTL: toPositiveInt(config.THROTTLE_TTL, 60, 'THROTTLE_TTL'),
     THROTTLE_LIMIT: toPositiveInt(config.THROTTLE_LIMIT, 100, 'THROTTLE_LIMIT'),
+    // El puerto solo se valida como puerto si viene; sin correo configurado
+    // queda en 587 por defecto y nunca se usa.
+    MAIL_HOST: asString(config.MAIL_HOST).trim(),
+    MAIL_PORT: toPort(config.MAIL_PORT, 587, 'MAIL_PORT'),
+    MAIL_SECURE: toBool(config.MAIL_SECURE),
+    MAIL_USER: asString(config.MAIL_USER).trim(),
+    MAIL_PASSWORD: asString(config.MAIL_PASSWORD),
+    MAIL_FROM: asString(config.MAIL_FROM).trim(),
   };
 }

@@ -18,12 +18,15 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateSaleUseCase } from '../../application/create-sale.use-case';
 import { FindSaleUseCase } from '../../application/find-sale.use-case';
+import { GenerateSalePdfUseCase } from '../../application/generate-sale-pdf.use-case';
 import { SearchSalesUseCase } from '../../application/search-sales.use-case';
+import { SendSalePdfUseCase } from '../../application/send-sale-pdf.use-case';
 import { UpdateSaleUseCase } from '../../application/update-sale.use-case';
 import { CreateSaleRequestDto } from './dto/create-sale.request.dto';
 import {
@@ -31,7 +34,10 @@ import {
   SaleResponseDto,
   SaleSummaryResponseDto,
 } from './dto/sale.response.dto';
+import { SalePdfResponseDto } from './dto/sale-pdf.response.dto';
 import { SearchSalesQueryDto } from './dto/search-sales.query.dto';
+import { SendSaleEmailRequestDto } from './dto/send-sale-email.request.dto';
+import { SendSaleEmailResponseDto } from './dto/send-sale-email.response.dto';
 import { UpdateSaleRequestDto } from './dto/update-sale.request.dto';
 
 const UUID_EJEMPLO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
@@ -44,6 +50,8 @@ export class SalesController {
     private readonly searchSales: SearchSalesUseCase,
     private readonly createSale: CreateSaleUseCase,
     private readonly updateSale: UpdateSaleUseCase,
+    private readonly generateSalePdf: GenerateSalePdfUseCase,
+    private readonly sendSalePdf: SendSalePdfUseCase,
   ) {}
 
   // La ruta sin parametro va antes que ':saleId' para que no se interprete como
@@ -121,6 +129,69 @@ export class SalesController {
   ): Promise<SaleResponseDto> {
     const sale = await this.findSale.execute(saleId);
     return SaleResponseDto.fromDomain(sale);
+  }
+
+  @Get(':saleId/pdf')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar el PDF de una venta',
+    description:
+      'Genera el comprobante en PDF (con su detalle) y lo devuelve codificado en ' +
+      'base64. El PDF se arma en memoria; no se guarda en el servidor.',
+  })
+  @ApiParam({ name: 'saleId', format: 'uuid', example: UUID_EJEMPLO })
+  @ApiOkResponse({
+    description: 'PDF del comprobante en base64.',
+    type: SalePdfResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El id no es un UUID valido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No existe una venta con ese id.',
+    type: ApiErrorDto,
+  })
+  async pdf(
+    @Param('saleId', new ParseUUIDPipe({ version: '4' })) saleId: string,
+  ): Promise<SalePdfResponseDto> {
+    const output = await this.generateSalePdf.execute(saleId);
+    return SalePdfResponseDto.fromOutput(output);
+  }
+
+  @Post(':saleId/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar el PDF de una venta por correo',
+    description:
+      'Genera el comprobante en PDF (base64 en memoria, sin guardarlo en disco) y ' +
+      'lo adjunta a un correo dirigido a la direccion indicada en el cuerpo.',
+  })
+  @ApiParam({ name: 'saleId', format: 'uuid', example: UUID_EJEMPLO })
+  @ApiOkResponse({
+    description: 'Correo despachado con el PDF adjunto.',
+    type: SendSaleEmailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El id no es un UUID valido o el correo no es valido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No existe una venta con ese id.',
+    type: ApiErrorDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'El correo no esta configurado (faltan las variables MAIL_*) o el servidor ' +
+      'SMTP no acepto el mensaje.',
+    type: ApiErrorDto,
+  })
+  async sendEmail(
+    @Param('saleId', new ParseUUIDPipe({ version: '4' })) saleId: string,
+    @Body() dto: SendSaleEmailRequestDto,
+  ): Promise<SendSaleEmailResponseDto> {
+    const output = await this.sendSalePdf.execute(saleId, dto.email);
+    return SendSaleEmailResponseDto.fromOutput(output);
   }
 
   @Post()
