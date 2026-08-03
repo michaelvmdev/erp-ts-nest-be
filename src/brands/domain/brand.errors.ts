@@ -22,3 +22,21 @@ export class BrandAlreadyExistsError extends ConflictError {
     super(`Ya existe una marca con la descripcion "${description}".`);
   }
 }
+
+/**
+ * La marca tiene productos que la referencian.
+ *
+ * Se responde 409 y no 500: la peticion es valida, pero choca con el estado del
+ * sistema. Borrarla dejaria huerfanos esos productos, y la clave foranea de
+ * products lo impide. La salida correcta es desactivarla.
+ */
+export class BrandInUseError extends ConflictError {
+  readonly code = 'BRAND_IN_USE';
+
+  constructor(brandId: string) {
+    super(
+      `La marca ${brandId} no se puede eliminar porque tiene productos asociados. ` +
+        'Desactivala con PATCH /brands/{brandId} enviando "brandActive": false.',
+    );
+  }
+}
