@@ -14,6 +14,7 @@ export interface EnvVars {
   POSTGRES_USER: string;
   POSTGRES_PASSWORD: string;
   POSTGRES_DATABASE: string;
+  POSTGRES_SSL: boolean;
   POSTGRES_LOGGING: boolean;
   THROTTLE_TTL: number;
   THROTTLE_LIMIT: number;
@@ -99,11 +100,12 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   return {
     NODE_ENV: nodeEnv === '' ? 'development' : nodeEnv,
     PORT: toPort(config.PORT, 3000, 'PORT'),
-    POSTGRES_HOST: asString(config.POSTGRES_HOST),
+    POSTGRES_HOST: asString(config.POSTGRES_HOST).trim(),
     POSTGRES_PORT: toPort(config.POSTGRES_PORT, 5432, 'POSTGRES_PORT'),
-    POSTGRES_USER: asString(config.POSTGRES_USER),
+    POSTGRES_USER: asString(config.POSTGRES_USER).trim(),
     POSTGRES_PASSWORD: asString(config.POSTGRES_PASSWORD),
-    POSTGRES_DATABASE: asString(config.POSTGRES_DATABASE),
+    POSTGRES_DATABASE: asString(config.POSTGRES_DATABASE).trim(),
+    POSTGRES_SSL: toBool(config.POSTGRES_SSL),
     POSTGRES_LOGGING: toBool(config.POSTGRES_LOGGING),
     THROTTLE_TTL: toPositiveInt(config.THROTTLE_TTL, 60, 'THROTTLE_TTL'),
     THROTTLE_LIMIT: toPositiveInt(config.THROTTLE_LIMIT, 100, 'THROTTLE_LIMIT'),

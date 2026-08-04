@@ -18,6 +18,9 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
         username: config.getOrThrow<string>('POSTGRES_USER'),
         password: config.getOrThrow<string>('POSTGRES_PASSWORD'),
         database: config.getOrThrow<string>('POSTGRES_DATABASE'),
+        ssl: config.get<boolean>('POSTGRES_SSL')
+          ? { rejectUnauthorized: false }
+          : undefined,
 
         // NUNCA poner esto en true. El esquema de db/db.sql esta escrito a mano
         // e incluye cosas que TypeORM no sabe representar: CHECK de formato,

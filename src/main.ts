@@ -1,12 +1,12 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express, { type Request, type Response } from 'express';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './shared/infrastructure/http/domain-exception.filter';
 import { isSwaggerEnabled, setupScalar, setupSwagger } from './swagger';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
+async function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>) {
   app.useGlobalPipes(
     new ValidationPipe({
       // Descarta las propiedades que no estan declaradas en el DTO.
@@ -32,9 +32,35 @@ async function bootstrap() {
     // Scalar reutiliza el JSON que publica Swagger, asi que va despues.
     setupScalar(app);
   }
+}
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await configureApp(app);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
   Logger.log(`Servidor escuchando en http://localhost:${port}`, 'Bootstrap');
 }
-void bootstrap();
+
+let cachedServer: ReturnType<typeof express> | undefined;
+
+async function createServer() {
+  if (cachedServer) return cachedServer;
+
+  const server = express();
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+  await configureApp(app);
+  await app.init();
+  cachedServer = server;
+  return server;
+}
+
+export default async function handler(req: Request, res: Response) {
+  const server = await createServer();
+  return server(req, res);
+}
+
+if (require.main === module) {
+  void bootstrap();
+}
