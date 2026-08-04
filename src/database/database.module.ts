@@ -2,18 +2,40 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 
+interface DatabaseUrlOptions {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  database: string;
+}
+
+function getDatabaseUrlOptions(url: string): DatabaseUrlOptions {
+  const parsed = new URL(url);
+
+  return {
+    host: parsed.hostname,
+    port: Number(parsed.port || 5432),
+    username: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: parsed.pathname.replace(/^\//, ''),
+  };
+}
+
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService): TypeOrmModuleOptions => {
-        const postgresUrl = config.get<string>('POSTGRES_URL');
+        const postgresUrl = config.get<string>('POSTGRES_URL') ?? '';
         const ssl =
           config.get<boolean>('POSTGRES_SSL') ||
           postgresUrl?.includes('sslmode=require')
             ? { rejectUnauthorized: false }
             : undefined;
+        const urlOptions =
+          postgresUrl === '' ? undefined : getDatabaseUrlOptions(postgresUrl);
 
         return {
           type: 'postgres',
@@ -21,27 +43,16 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
           // getOrThrow y no get: si una variable falta, el error apunta al nombre
           // exacto en vez de fallar mas tarde dentro del driver. validateEnv ya
           // deberia haberlo cortado antes, esto es la segunda linea de defensa.
-          url: postgresUrl === '' ? undefined : postgresUrl,
-          host:
-            postgresUrl === ''
-              ? config.getOrThrow<string>('POSTGRES_HOST')
-              : undefined,
-          port:
-            postgresUrl === ''
-              ? config.getOrThrow<number>('POSTGRES_PORT')
-              : undefined,
+          host: urlOptions?.host ?? config.getOrThrow<string>('POSTGRES_HOST'),
+          port: urlOptions?.port ?? config.getOrThrow<number>('POSTGRES_PORT'),
           username:
-            postgresUrl === ''
-              ? config.getOrThrow<string>('POSTGRES_USER')
-              : undefined,
+            urlOptions?.username ?? config.getOrThrow<string>('POSTGRES_USER'),
           password:
-            postgresUrl === ''
-              ? config.getOrThrow<string>('POSTGRES_PASSWORD')
-              : undefined,
+            urlOptions?.password ??
+            config.getOrThrow<string>('POSTGRES_PASSWORD'),
           database:
-            postgresUrl === ''
-              ? config.getOrThrow<string>('POSTGRES_DATABASE')
-              : undefined,
+            urlOptions?.database ??
+            config.getOrThrow<string>('POSTGRES_DATABASE'),
           ssl,
 
           // NUNCA poner esto en true. El esquema de db/db.sql esta escrito a mano
