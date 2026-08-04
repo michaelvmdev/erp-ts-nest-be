@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 
@@ -42,6 +42,7 @@ function buildLocalDatabaseUrl(config: ConfigService): string {
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService): TypeOrmModuleOptions => {
+        const logger = new Logger('DatabaseModule');
         const postgresUrl =
           config.get<string>('DB_POSTGRES_URL') ||
           buildLocalDatabaseUrl(config);
@@ -51,6 +52,9 @@ function buildLocalDatabaseUrl(config: ConfigService): string {
             ? { rejectUnauthorized: false }
             : undefined;
         const urlOptions = getDatabaseUrlOptions(postgresUrl);
+        logger.log(
+          `PostgreSQL ${urlOptions.username}@${urlOptions.host}:${urlOptions.port}/${urlOptions.database}`,
+        );
 
         return {
           type: 'postgres',

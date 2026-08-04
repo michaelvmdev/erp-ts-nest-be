@@ -86,6 +86,16 @@ function toPositiveInt(
 
 export function validateEnv(config: Record<string, unknown>): EnvVars {
   const dbPostgresUrl = asString(config.DB_POSTGRES_URL).trim();
+  const nodeEnv = asString(config.NODE_ENV).trim();
+  const isHosted = nodeEnv === 'production' || asString(config.VERCEL) === '1';
+
+  if (isHosted && dbPostgresUrl === '') {
+    throw new Error(
+      'Falta variable de entorno obligatoria: DB_POSTGRES_URL. ' +
+        'En Vercel usa la URL del pooler de Supabase.',
+    );
+  }
+
   const faltantes =
     dbPostgresUrl === ''
       ? REQUERIDAS.filter((clave) => asString(config[clave]).trim() === '')
@@ -97,8 +107,6 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
         'Copia .env.example a .env y completalo.',
     );
   }
-
-  const nodeEnv = asString(config.NODE_ENV).trim();
 
   return {
     NODE_ENV: nodeEnv === '' ? 'development' : nodeEnv,
