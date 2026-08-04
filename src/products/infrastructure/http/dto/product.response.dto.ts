@@ -17,6 +17,13 @@ export class ProductResponseDto {
   })
   brandId!: string;
 
+  @ApiProperty({
+    format: 'uuid',
+    example: '4b53e66e-794b-4e37-b4af-4e5971858c23',
+    description: 'Categoria a la que pertenece.',
+  })
+  categoryId!: string;
+
   @ApiProperty({ maxLength: 100, example: 'Logitech MX Master 3S' })
   productName!: string;
 
@@ -59,6 +66,7 @@ export class ProductResponseDto {
     const dto = new ProductResponseDto();
     dto.productId = s.id;
     dto.brandId = s.brandId;
+    dto.categoryId = s.categoryId;
     dto.productName = s.name;
     dto.productDescription = s.description;
     dto.productImage = s.image;

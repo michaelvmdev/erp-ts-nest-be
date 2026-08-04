@@ -23,6 +23,15 @@ export interface ClientRepository {
   insert(client: Client): Promise<void>;
 
   update(client: Client): Promise<void>;
+
+  /**
+   * Baja fisica.
+   *
+   * Lanza ClientInUseError si el cliente figura en ventas registradas: la
+   * decision de traducir la violacion de clave foranea a un error de dominio es
+   * del adaptador, porque solo el conoce los codigos de error de PostgreSQL.
+   */
+  delete(id: ClientId): Promise<void>;
 }
 
 /**

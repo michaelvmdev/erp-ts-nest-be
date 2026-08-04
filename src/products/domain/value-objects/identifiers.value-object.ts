@@ -7,8 +7,10 @@ export class ProductId extends UuidValueObject {
 }
 
 /**
- * BrandId se reexporta desde el modulo de marcas, que es el dueno de esa
- * identidad. Productos la referencia; definir aqui una copia haria que dos
- * clases distintas representaran lo mismo y `instanceof` fallaria entre modulos.
+ * BrandId y CategoryId se reexportan desde sus modulos, que son los duenos de
+ * esas identidades. Productos las referencia; definir aqui una copia haria que
+ * dos clases distintas representaran lo mismo y `instanceof` fallaria entre
+ * modulos.
  */
 export { BrandId } from '../../../brands/domain/value-objects/brand-id.value-object';
+export { CategoryId } from '../../../categories/domain/value-objects/category-id.value-object';

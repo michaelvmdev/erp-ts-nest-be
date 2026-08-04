@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CreateBrandUseCase } from './application/create-brand.use-case';
+import { DeleteBrandUseCase } from './application/delete-brand.use-case';
 import { FindBrandUseCase } from './application/find-brand.use-case';
 import { ListBrandsUseCase } from './application/list-brands.use-case';
 import { UpdateBrandUseCase } from './application/update-brand.use-case';
@@ -19,6 +20,7 @@ import { TypeOrmBrandRepository } from './infrastructure/persistence/typeorm-bra
     ListBrandsUseCase,
     CreateBrandUseCase,
     UpdateBrandUseCase,
+    DeleteBrandUseCase,
   ],
   // products necesita la entidad ORM de marcas para su comprobacion de
   // existencia; se exporta desde aqui para que haya una sola definicion.

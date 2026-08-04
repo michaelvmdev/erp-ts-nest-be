@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentTypeOrmEntity } from '../document-types/infrastructure/persistence/document-type.orm-entity';
 import { CreateClientUseCase } from './application/create-client.use-case';
+import { DeleteClientUseCase } from './application/delete-client.use-case';
 import { FindClientUseCase } from './application/find-client.use-case';
 import { SearchClientsUseCase } from './application/search-clients.use-case';
 import { UpdateClientUseCase } from './application/update-client.use-case';
@@ -29,6 +30,7 @@ import { TypeOrmClientRepository } from './infrastructure/persistence/typeorm-cl
     SearchClientsUseCase,
     CreateClientUseCase,
     UpdateClientUseCase,
+    DeleteClientUseCase,
   ],
   exports: [TypeOrmModule],
 })

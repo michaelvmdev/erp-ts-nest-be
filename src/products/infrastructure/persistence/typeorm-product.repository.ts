@@ -81,11 +81,15 @@ export class TypeOrmProductRepository
     criteria: ProductSearchCriteria,
   ): void {
     if (criteria.description) {
-      // ILIKE: insensible a mayusculas. El comodin va como parametro, nunca
-      // concatenado, para que no haya forma de inyectar SQL desde el filtro.
-      qb.andWhere('p.productDescription ILIKE :descripcion', {
-        descripcion: `%${criteria.description}%`,
-      });
+      // Busqueda general de texto: coincide por nombre O por descripcion,
+      // insensible a mayusculas. Asi quien escribe el nombre del producto lo
+      // encuentra, no solo quien recuerda una palabra de la descripcion.
+      // El comodin va como parametro, nunca concatenado, para que no haya forma
+      // de inyectar SQL desde el filtro.
+      qb.andWhere(
+        '(p.productName ILIKE :texto OR p.productDescription ILIKE :texto)',
+        { texto: `%${criteria.description}%` },
+      );
     }
 
     if (criteria.priceRange.min) {

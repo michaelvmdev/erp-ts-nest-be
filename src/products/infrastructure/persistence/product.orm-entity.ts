@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { BrandOrmEntity } from '../../../brands/infrastructure/persistence/brand.orm-entity';
+import { CategoryOrmEntity } from '../../../categories/infrastructure/persistence/category.orm-entity';
 
 /**
  * Modelo de persistencia. NO es el modelo de dominio.
@@ -21,6 +22,9 @@ export class ProductOrmEntity {
 
   @Column({ name: 'brand_id', type: 'uuid' })
   brandId!: string;
+
+  @Column({ name: 'category_id', type: 'uuid' })
+  categoryId!: string;
 
   @Column({ name: 'product_name', type: 'varchar', length: 100 })
   productName!: string;
@@ -61,4 +65,8 @@ export class ProductOrmEntity {
   @ManyToOne(() => BrandOrmEntity, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'brand_id', referencedColumnName: 'brandId' })
   brand?: BrandOrmEntity;
+
+  @ManyToOne(() => CategoryOrmEntity, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'category_id', referencedColumnName: 'categoryId' })
+  category?: CategoryOrmEntity;
 }

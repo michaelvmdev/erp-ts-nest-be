@@ -51,10 +51,10 @@ export class PriceRangeDto {
 export class QueryProductsRequestDto {
   @ApiPropertyOptional({
     maxLength: 250,
-    example: 'inalambrico',
+    example: 'acer',
     description:
-      'Coincidencia parcial e insensible a mayusculas sobre la descripcion ' +
-      '(equivale a `ILIKE %texto%`).',
+      'Coincidencia parcial e insensible a mayusculas sobre el nombre o la ' +
+      'descripcion del producto (equivale a `ILIKE %texto%`).',
   })
   @IsOptional()
   @IsString()

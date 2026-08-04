@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -14,6 +15,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateBrandUseCase } from '../../application/create-brand.use-case';
+import { DeleteBrandUseCase } from '../../application/delete-brand.use-case';
 import { FindBrandUseCase } from '../../application/find-brand.use-case';
 import { ListBrandsUseCase } from '../../application/list-brands.use-case';
 import { UpdateBrandUseCase } from '../../application/update-brand.use-case';
@@ -43,6 +46,7 @@ export class BrandsController {
     private readonly listBrands: ListBrandsUseCase,
     private readonly createBrand: CreateBrandUseCase,
     private readonly updateBrand: UpdateBrandUseCase,
+    private readonly deleteBrand: DeleteBrandUseCase,
   ) {}
 
   // La ruta sin parametro va declarada antes que ':brandId' para que "brands"
@@ -141,9 +145,9 @@ export class BrandsController {
     summary: 'Modificar o desactivar una marca',
     description:
       'Actualizacion parcial: solo se modifican los campos presentes en el cuerpo.\n\n' +
-      'Para desactivar una marca basta con enviar `{"brandActive": false}`. No existe ' +
-      'DELETE a proposito: una marca desactivada conserva sus productos y el historico ' +
-      'de ventas, asi que la unica baja posible es logica.',
+      'Para desactivar una marca basta con enviar `{"brandActive": false}`. Preferible a ' +
+      'DELETE cuando la marca ya tiene productos: los conserva junto con el historico de ' +
+      'ventas, mientras que DELETE lo rechaza con 409 en ese caso.',
   })
   @ApiParam({ name: 'brandId', format: 'uuid', example: UUID_EJEMPLO })
   @ApiOkResponse({ description: 'Marca actualizada.', type: BrandResponseDto })
@@ -165,5 +169,36 @@ export class BrandsController {
   ): Promise<BrandResponseDto> {
     const brand = await this.updateBrand.execute(brandId, dto);
     return BrandResponseDto.fromDomain(brand);
+  }
+
+  @Delete(':brandId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Eliminar una marca',
+    description:
+      'Baja fisica. Si la marca tiene productos asociados la operacion se rechaza con ' +
+      '409, porque borrarla dejaria huerfanos esos productos. En ese caso corresponde ' +
+      'desactivarla con PATCH enviando `"brandActive": false`.',
+  })
+  @ApiParam({ name: 'brandId', format: 'uuid', example: UUID_EJEMPLO })
+  @ApiNoContentResponse({
+    description: 'Marca eliminada. Sin cuerpo de respuesta.',
+  })
+  @ApiBadRequestResponse({
+    description: 'El id no es un UUID valido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No existe una marca con ese id.',
+    type: ApiErrorDto,
+  })
+  @ApiConflictResponse({
+    description: 'La marca esta referenciada por productos.',
+    type: ApiErrorDto,
+  })
+  async remove(
+    @Param('brandId', new ParseUUIDPipe({ version: '4' })) brandId: string,
+  ): Promise<void> {
+    await this.deleteBrand.execute(brandId);
   }
 }

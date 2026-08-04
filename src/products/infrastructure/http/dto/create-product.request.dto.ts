@@ -29,6 +29,15 @@ export class CreateProductRequestDto {
   brandId!: string;
 
   @ApiProperty({
+    format: 'uuid',
+    example: '4b53e66e-794b-4e37-b4af-4e5971858c23',
+    description:
+      'Categoria del producto. Debe corresponder a una categoria existente.',
+  })
+  @IsUUID('4', { message: 'categoryId debe ser un UUID valido.' })
+  categoryId!: string;
+
+  @ApiProperty({
     minLength: 1,
     maxLength: 100,
     example: 'Logitech MX Master 3S',

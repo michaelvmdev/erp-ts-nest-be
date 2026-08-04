@@ -29,6 +29,15 @@ export interface BrandRepository {
   insert(brand: Brand): Promise<void>;
 
   update(brand: Brand): Promise<void>;
+
+  /**
+   * Baja fisica.
+   *
+   * Lanza BrandInUseError si la marca tiene productos asociados: la decision de
+   * traducir la violacion de clave foranea a un error de dominio es del
+   * adaptador, porque solo el conoce los codigos de error de PostgreSQL.
+   */
+  delete(id: BrandId): Promise<void>;
 }
 
 export const BRAND_REPOSITORY = Symbol('BrandRepository');

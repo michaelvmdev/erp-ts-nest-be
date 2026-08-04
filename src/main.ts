@@ -2,7 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './shared/infrastructure/http/domain-exception.filter';
-import { isSwaggerEnabled, setupSwagger } from './swagger';
+import { isSwaggerEnabled, setupScalar, setupSwagger } from './swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -29,6 +29,8 @@ async function bootstrap() {
 
   if (isSwaggerEnabled()) {
     setupSwagger(app);
+    // Scalar reutiliza el JSON que publica Swagger, asi que va despues.
+    setupScalar(app);
   }
 
   const port = process.env.PORT ?? 3000;

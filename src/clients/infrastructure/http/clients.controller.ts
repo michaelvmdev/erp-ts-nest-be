@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -14,6 +15,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateClientUseCase } from '../../application/create-client.use-case';
+import { DeleteClientUseCase } from '../../application/delete-client.use-case';
 import { FindClientUseCase } from '../../application/find-client.use-case';
 import { SearchClientsUseCase } from '../../application/search-clients.use-case';
 import { UpdateClientUseCase } from '../../application/update-client.use-case';
@@ -43,6 +46,7 @@ export class ClientsController {
     private readonly searchClients: SearchClientsUseCase,
     private readonly createClient: CreateClientUseCase,
     private readonly updateClient: UpdateClientUseCase,
+    private readonly deleteClient: DeleteClientUseCase,
   ) {}
 
   // La ruta sin parametro va declarada antes que ':clientId' para que no se
@@ -159,8 +163,8 @@ export class ClientsController {
     description:
       'Actualizacion parcial: solo se modifican los campos presentes en el cuerpo.\n\n' +
       'Para desactivar un cliente basta con enviar `{"clientActive": false}`, y `true` lo ' +
-      'reactiva. No existe DELETE a proposito: un cliente desactivado conserva su ' +
-      'historial de compras, asi que la unica baja posible es logica.\n\n' +
+      'reactiva. Preferible a DELETE cuando el cliente ya tiene ventas: conserva su ' +
+      'historial de compras, mientras que DELETE lo rechaza con 409 en ese caso.\n\n' +
       'Tipo y numero de documento se validan siempre juntos. Si se envia solo el tipo, ' +
       'el numero vigente debe cumplir el formato del tipo nuevo; de lo contrario hay que ' +
       'enviar ambos.',
@@ -189,5 +193,36 @@ export class ClientsController {
   ): Promise<ClientResponseDto> {
     const client = await this.updateClient.execute(clientId, dto);
     return ClientResponseDto.fromDomain(client);
+  }
+
+  @Delete(':clientId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Eliminar un cliente',
+    description:
+      'Baja fisica. Si el cliente ya figura en ventas registradas la operacion se rechaza ' +
+      'con 409, porque borrarlo dejaria huerfano ese historico. En ese caso corresponde ' +
+      'desactivarlo con PATCH enviando `"clientActive": false`.',
+  })
+  @ApiParam({ name: 'clientId', format: 'uuid', example: UUID_EJEMPLO })
+  @ApiNoContentResponse({
+    description: 'Cliente eliminado. Sin cuerpo de respuesta.',
+  })
+  @ApiBadRequestResponse({
+    description: 'El id no es un UUID valido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No existe un cliente con ese id.',
+    type: ApiErrorDto,
+  })
+  @ApiConflictResponse({
+    description: 'El cliente esta referenciado por ventas registradas.',
+    type: ApiErrorDto,
+  })
+  async remove(
+    @Param('clientId', new ParseUUIDPipe({ version: '4' })) clientId: string,
+  ): Promise<void> {
+    await this.deleteClient.execute(clientId);
   }
 }

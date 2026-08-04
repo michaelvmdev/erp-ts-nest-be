@@ -1,5 +1,9 @@
 import { Money } from './value-objects/money.value-object';
-import { BrandId, ProductId } from './value-objects/identifiers.value-object';
+import {
+  BrandId,
+  CategoryId,
+  ProductId,
+} from './value-objects/identifiers.value-object';
 import {
   ProductDescription,
   ProductImage,
@@ -10,6 +14,7 @@ import {
 export interface ProductSnapshot {
   readonly id: string;
   readonly brandId: string;
+  readonly categoryId: string;
   readonly name: string;
   readonly description: string | null;
   readonly image: string | null;
@@ -36,6 +41,7 @@ export class Product {
   private constructor(
     private readonly _id: ProductId,
     private _brandId: BrandId,
+    private _categoryId: CategoryId,
     private _name: ProductName,
     private _description: ProductDescription,
     private _image: ProductImage,
@@ -47,6 +53,7 @@ export class Product {
   static create(params: {
     id: ProductId;
     brandId: BrandId;
+    categoryId: CategoryId;
     name: ProductName;
     description: ProductDescription;
     image: ProductImage;
@@ -56,6 +63,7 @@ export class Product {
     return new Product(
       params.id,
       params.brandId,
+      params.categoryId,
       params.name,
       params.description,
       params.image,
@@ -74,6 +82,7 @@ export class Product {
   static rehydrate(params: {
     id: ProductId;
     brandId: BrandId;
+    categoryId: CategoryId;
     name: ProductName;
     description: ProductDescription;
     image: ProductImage;
@@ -83,6 +92,7 @@ export class Product {
     return new Product(
       params.id,
       params.brandId,
+      params.categoryId,
       params.name,
       params.description,
       params.image,
@@ -97,6 +107,10 @@ export class Product {
 
   get brandId(): BrandId {
     return this._brandId;
+  }
+
+  get categoryId(): CategoryId {
+    return this._categoryId;
   }
 
   get name(): ProductName {
@@ -139,6 +153,10 @@ export class Product {
     this._brandId = brandId;
   }
 
+  reassignCategory(categoryId: CategoryId): void {
+    this._categoryId = categoryId;
+  }
+
   activate(): void {
     this._active = true;
   }
@@ -151,6 +169,7 @@ export class Product {
     return {
       id: this._id.value,
       brandId: this._brandId.value,
+      categoryId: this._categoryId.value,
       name: this._name.value,
       description: this._description.value,
       image: this._image.value,

@@ -2,18 +2,22 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Product } from '../domain/product';
 import {
   BrandNotFoundError,
+  CategoryNotFoundError,
   ProductNotFoundError,
 } from '../domain/product.errors';
 import {
   BRAND_EXISTENCE_CHECKER,
+  CATEGORY_EXISTENCE_CHECKER,
   PRODUCT_REPOSITORY,
 } from '../domain/product.repository';
 import type {
   BrandExistenceChecker,
+  CategoryExistenceChecker,
   ProductRepository,
 } from '../domain/product.repository';
 import {
   BrandId,
+  CategoryId,
   ProductId,
 } from '../domain/value-objects/identifiers.value-object';
 import { Money } from '../domain/value-objects/money.value-object';
@@ -31,6 +35,8 @@ export class UpdateProductUseCase {
     private readonly products: ProductRepository,
     @Inject(BRAND_EXISTENCE_CHECKER)
     private readonly brands: BrandExistenceChecker,
+    @Inject(CATEGORY_EXISTENCE_CHECKER)
+    private readonly categories: CategoryExistenceChecker,
   ) {}
 
   async execute(
@@ -53,6 +59,14 @@ export class UpdateProductUseCase {
         throw new BrandNotFoundError(brandId.value);
       }
       product.reassignBrand(brandId);
+    }
+
+    if (command.categoryId !== undefined) {
+      const categoryId = CategoryId.of(command.categoryId);
+      if (!(await this.categories.exists(categoryId))) {
+        throw new CategoryNotFoundError(categoryId.value);
+      }
+      product.reassignCategory(categoryId);
     }
 
     if (command.productName !== undefined) {

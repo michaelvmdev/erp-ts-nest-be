@@ -16,6 +16,14 @@ export class BrandNotFoundError extends NotFoundError {
   }
 }
 
+export class CategoryNotFoundError extends NotFoundError {
+  readonly code = 'CATEGORY_NOT_FOUND';
+
+  constructor(categoryId: string) {
+    super(`No existe una categoria con id ${categoryId}.`);
+  }
+}
+
 /**
  * El producto figura en ventas ya registradas.
  *
