@@ -9,7 +9,7 @@
 export interface EnvVars {
   NODE_ENV: string;
   PORT: number;
-  POSTGRES_URL: string;
+  DB_POSTGRES_URL: string;
   POSTGRES_HOST: string;
   POSTGRES_PORT: number;
   POSTGRES_USER: string;
@@ -30,11 +30,10 @@ export interface EnvVars {
 }
 
 const REQUERIDAS = [
-  ['POSTGRES_URL', 'PG_DB_POSTGRES_URL'],
-  ['POSTGRES_HOST', 'PG_DB_POSTGRES_HOST'],
-  ['POSTGRES_USER', 'PG_DB_POSTGRES_USER'],
-  ['POSTGRES_PASSWORD', 'PG_DB_POSTGRES_PASSWORD'],
-  ['POSTGRES_DATABASE', 'PG_DB_POSTGRES_DATABASE'],
+  'POSTGRES_HOST',
+  'POSTGRES_USER',
+  'POSTGRES_PASSWORD',
+  'POSTGRES_DATABASE',
 ] as const;
 
 /**
@@ -68,17 +67,6 @@ function toBool(valor: unknown, porDefecto = false): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw);
 }
 
-function firstString(
-  config: Record<string, unknown>,
-  ...claves: string[]
-): string {
-  for (const clave of claves) {
-    const valor = asString(config[clave]).trim();
-    if (valor !== '') return valor;
-  }
-  return '';
-}
-
 /** Entero >= 1 con valor por defecto. Usado por la config del rate-limiting. */
 function toPositiveInt(
   valor: unknown,
@@ -97,18 +85,10 @@ function toPositiveInt(
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvVars {
-  const postgresUrl = firstString(
-    config,
-    'POSTGRES_URL',
-    'DATABASE_URL',
-    'PG_DB_POSTGRES_URL',
-    'PG_DB_POSTGRES_PRISMA_URL',
-  );
+  const dbPostgresUrl = asString(config.DB_POSTGRES_URL).trim();
   const faltantes =
-    postgresUrl === ''
-      ? REQUERIDAS.slice(1)
-          .filter((claves) => firstString(config, ...claves) === '')
-          .map((claves) => claves[0])
+    dbPostgresUrl === ''
+      ? REQUERIDAS.filter((clave) => asString(config[clave]).trim() === '')
       : [];
 
   if (faltantes.length > 0) {
@@ -123,24 +103,12 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   return {
     NODE_ENV: nodeEnv === '' ? 'development' : nodeEnv,
     PORT: toPort(config.PORT, 3000, 'PORT'),
-    POSTGRES_URL: postgresUrl,
-    POSTGRES_HOST: firstString(config, 'POSTGRES_HOST', 'PG_DB_POSTGRES_HOST'),
-    POSTGRES_PORT: toPort(
-      firstString(config, 'POSTGRES_PORT', 'PG_DB_POSTGRES_PORT'),
-      5432,
-      'POSTGRES_PORT',
-    ),
-    POSTGRES_USER: firstString(config, 'POSTGRES_USER', 'PG_DB_POSTGRES_USER'),
-    POSTGRES_PASSWORD: firstString(
-      config,
-      'POSTGRES_PASSWORD',
-      'PG_DB_POSTGRES_PASSWORD',
-    ),
-    POSTGRES_DATABASE: firstString(
-      config,
-      'POSTGRES_DATABASE',
-      'PG_DB_POSTGRES_DATABASE',
-    ),
+    DB_POSTGRES_URL: dbPostgresUrl,
+    POSTGRES_HOST: asString(config.POSTGRES_HOST).trim(),
+    POSTGRES_PORT: toPort(config.POSTGRES_PORT, 5432, 'POSTGRES_PORT'),
+    POSTGRES_USER: asString(config.POSTGRES_USER).trim(),
+    POSTGRES_PASSWORD: asString(config.POSTGRES_PASSWORD),
+    POSTGRES_DATABASE: asString(config.POSTGRES_DATABASE).trim(),
     POSTGRES_SSL: toBool(config.POSTGRES_SSL),
     POSTGRES_LOGGING: toBool(config.POSTGRES_LOGGING),
     THROTTLE_TTL: toPositiveInt(config.THROTTLE_TTL, 60, 'THROTTLE_TTL'),

@@ -22,20 +22,35 @@ function getDatabaseUrlOptions(url: string): DatabaseUrlOptions {
   };
 }
 
+function buildLocalDatabaseUrl(config: ConfigService): string {
+  const host = config.getOrThrow<string>('POSTGRES_HOST');
+  const port = config.getOrThrow<number>('POSTGRES_PORT');
+  const username = encodeURIComponent(
+    config.getOrThrow<string>('POSTGRES_USER'),
+  );
+  const password = encodeURIComponent(
+    config.getOrThrow<string>('POSTGRES_PASSWORD'),
+  );
+  const database = config.getOrThrow<string>('POSTGRES_DATABASE');
+
+  return `postgres://${username}:${password}@${host}:${port}/${database}`;
+}
+
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService): TypeOrmModuleOptions => {
-        const postgresUrl = config.get<string>('POSTGRES_URL') ?? '';
+        const postgresUrl =
+          config.get<string>('DB_POSTGRES_URL') ||
+          buildLocalDatabaseUrl(config);
         const ssl =
           config.get<boolean>('POSTGRES_SSL') ||
-          postgresUrl?.includes('sslmode=require')
+          postgresUrl.includes('sslmode=require')
             ? { rejectUnauthorized: false }
             : undefined;
-        const urlOptions =
-          postgresUrl === '' ? undefined : getDatabaseUrlOptions(postgresUrl);
+        const urlOptions = getDatabaseUrlOptions(postgresUrl);
 
         return {
           type: 'postgres',
@@ -43,16 +58,11 @@ function getDatabaseUrlOptions(url: string): DatabaseUrlOptions {
           // getOrThrow y no get: si una variable falta, el error apunta al nombre
           // exacto en vez de fallar mas tarde dentro del driver. validateEnv ya
           // deberia haberlo cortado antes, esto es la segunda linea de defensa.
-          host: urlOptions?.host ?? config.getOrThrow<string>('POSTGRES_HOST'),
-          port: urlOptions?.port ?? config.getOrThrow<number>('POSTGRES_PORT'),
-          username:
-            urlOptions?.username ?? config.getOrThrow<string>('POSTGRES_USER'),
-          password:
-            urlOptions?.password ??
-            config.getOrThrow<string>('POSTGRES_PASSWORD'),
-          database:
-            urlOptions?.database ??
-            config.getOrThrow<string>('POSTGRES_DATABASE'),
+          host: urlOptions.host,
+          port: urlOptions.port,
+          username: urlOptions.username,
+          password: urlOptions.password,
+          database: urlOptions.database,
           ssl,
 
           // NUNCA poner esto en true. El esquema de db/db.sql esta escrito a mano
