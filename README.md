@@ -10,17 +10,28 @@ npm install
 ```
 
 Copiá `.env.example` a `.env` y completá tus credenciales de PostgreSQL. Después
-creá la base con su esquema:
+cargá el esquema y los datos con el runner de `db/`:
 
 ```bash
-psql -h localhost -U postgres -c 'CREATE DATABASE "dbSales" ENCODING UTF8'
+node db/run.mjs --create-db
 ```
+
+`--create-db` crea la base `dbSales` si todavía no existe (se salta si no se
+tiene permiso, asumiendo que ya está creada). Sin ese flag, `node db/run.mjs`
+ejecuta todo en el orden correcto: esquema (`db.sql`), ubigeo y catálogos
+(`db_ubigeo.sql`, `db_data.sql`) y los 20 meses de ventas de `db/sales/`
+(enero 2025 a agosto 2026, en orden cronológico). Es reejecutable: cada script
+hace `DROP` antes de crear, así que correrlo de nuevo reemplaza todo.
+
+Otros usos, para no recargar lo que no cambió:
 
 ```bash
-psql -h localhost -U postgres -d dbSales -f db/db.sql -f db/db_ubigeo.sql -f db/db_data.sql
+node db/run.mjs --only=schema      # solo db.sql
+node db/run.mjs --only=reference   # ubigeo y catálogos, sin ventas
+node db/run.mjs --only=sales       # solo db/sales/*.sql
+node db/run.mjs --month=2026-08    # un mes concreto de ventas
+node db/run.mjs --dry-run          # enumera qué se ejecutaría, sin tocar nada
 ```
-
-El orden importa: `db.sql` crea las tablas y los otros dos las pueblan.
 
 ```bash
 npm run start:dev
@@ -30,10 +41,14 @@ npm run start:dev
 |---|---|
 | API | http://localhost:3000 |
 | Documentación Swagger | http://localhost:3000/docs |
+| Documentación Scalar | http://localhost:3000/reference |
 | Estado de la conexión | http://localhost:3000/health/db |
 
-Swagger solo se publica fuera de producción. Con `NODE_ENV=production` las rutas
-`/docs`, `/docs-json` y `/docs-yaml` ni se registran: responden 404.
+Swagger y Scalar leen el **mismo** documento OpenAPI (`/docs-json`), así que
+tienen exactamente los mismos endpoints y ejemplos; son dos formas de leerlo,
+no dos definiciones. Ambos solo se publican fuera de producción. Con
+`NODE_ENV=production` las rutas `/docs`, `/docs-json`, `/docs-yaml` y
+`/reference` ni se registran: responden 404.
 
 ## Arquitectura
 
@@ -234,6 +249,39 @@ compuestas, así que un cliente que enviara los tres podría mandar un distrito 
 Cusco con el departamento de Lima; derivarlos hace que esa combinación no pueda
 existir.
 
+#### PDF y envío por correo
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/sales/{saleId}/pdf` | Genera el comprobante en PDF, codificado en base64 |
+| `POST` | `/sales/{saleId}/send-email` | Genera el PDF y lo envía por correo adjunto |
+
+`GET /sales/{saleId}/pdf` arma el PDF con [pdfkit](https://pdfkit.org/) —
+encabezado con los datos de la tienda y el comprobante, cliente y localidad,
+tabla de líneas con el nombre real del producto y totales— **enteramente en
+memoria**, sin escribirlo a disco, y responde:
+
+```json
+{
+  "fileName": "FAC-0000007607.pdf",
+  "mimeType": "application/pdf",
+  "base64": "JVBERi0xLjMKJ..."
+}
+```
+
+`POST /sales/{saleId}/send-email` recibe `{"email": "cliente@ejemplo.com"}`,
+genera el mismo PDF en memoria y lo adjunta a un correo enviado por SMTP con
+[nodemailer](https://nodemailer.com/). Responde
+`{"to", "messageId", "sentAt"}`. El envío requiere las variables `MAIL_*` del
+`.env` (ver [Variables de entorno](#variables-de-entorno)); si faltan, o si el
+servidor SMTP rechaza el mensaje, responde 503 `SERVICE_UNAVAILABLE` con un
+mensaje que dice cuál es el problema, en vez de un 500 genérico — es una
+dependencia externa no disponible, no un fallo del propio backend.
+
+Ambos endpoints reutilizan la misma consulta de lectura (`SalePrintView`), que
+resuelve los nombres que el PDF necesita —cliente, tipo de comprobante, ubigeo,
+producto— y que el agregado `Sale` no tiene: solo guarda identificadores.
+
 ### Clientes
 
 | Método | Ruta | Descripción |
@@ -242,9 +290,16 @@ existir.
 | `GET` | `/clients/{clientId}` | Consulta un cliente |
 | `POST` | `/clients` | Alta |
 | `PATCH` | `/clients/{clientId}` | Modificación parcial, activación y desactivación |
+| `DELETE` | `/clients/{clientId}` | Baja física |
 
-Sin `DELETE`, por la misma razón que en marcas: un cliente desactivado conserva
-su historial de compras.
+`DELETE` es baja física. Si el cliente ya figura en ventas registradas, la
+clave foránea `fk_sales_client` lo impide y la API responde 409 `CLIENT_IN_USE`
+en vez de dejar huérfano ese histórico. Para retirar un cliente conservando su
+historial de compras:
+
+```
+PATCH /clients/{clientId}   {"clientActive": false}
+```
 
 Filtros de `GET /clients`, todos opcionales y combinados con `AND`:
 `clientDescription` (parcial), `documentNumber` (**exacto**), `documentTypeId`,
@@ -283,10 +338,12 @@ ambos.
 | `GET` | `/brands/{brandId}` | Consulta una marca |
 | `POST` | `/brands` | Alta |
 | `PATCH` | `/brands/{brandId}` | Modificación parcial y desactivación |
+| `DELETE` | `/brands/{brandId}` | Baja física |
 
-**No hay `DELETE`, y es deliberado.** Los productos referencian la marca por
-clave foránea y el histórico de ventas depende de ellos, así que la única baja
-posible es lógica:
+`DELETE` es baja física. Si la marca tiene productos asociados, la clave
+foránea `fk_products_brand` lo impide y la API responde 409 `BRAND_IN_USE` en
+vez de un 500 con un error crudo de PostgreSQL. Para retirar una marca
+conservando sus productos y el histórico de ventas:
 
 ```
 PATCH /brands/{brandId}   {"brandActive": false}
@@ -318,6 +375,34 @@ En la base es `brands.brand_active boolean NOT NULL DEFAULT true`. El seed lo
 declara explícitamente en cada fila aunque exista el `DEFAULT`, para que el
 estado quede a la vista y no dependa de un valor por omisión que podría cambiar
 en el esquema sin que nadie revise el archivo de datos.
+
+### Categorías
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/categories` | Listado paginado con filtros |
+| `GET` | `/categories/{categoryId}` | Consulta una categoría |
+| `POST` | `/categories` | Alta |
+| `PATCH` | `/categories/{categoryId}` | Modificación parcial y desactivación |
+| `DELETE` | `/categories/{categoryId}` | Baja física |
+
+Misma arquitectura que marcas, y con la misma pareja PATCH/DELETE: `PATCH`
+desactiva sin perder nada (`{"categoryActive": false}`), y `DELETE` es baja
+física que responde 409 `CATEGORY_IN_USE` si algún producto la referencia por
+`fk_products_category`.
+
+La descripción es única ignorando mayúsculas y espacios, igual que en marcas.
+El tamaño de página por defecto también es 50: las categorías suelen pedirse
+completas para poblar un desplegable.
+
+`products.category_id` es `NOT NULL`: todo producto pertenece a exactamente una
+categoría, obligatoria en `POST /products` y opcional en `PATCH`. El seed
+clasifica los 500 productos en 11 categorías por el nombre comercial —
+Laptops y Mac, Smartphones, Tablets, Monitores, Componentes, Almacenamiento,
+Periféricos, Audio, Redes, Impresión y Accesorios—; la clasificación se hizo
+por nombre y no por descripción larga, porque la descripción menciona detalles
+técnicos ("cámara de 48MP", "parlantes cuadrafónicos") que arrastraban
+productos a la categoría equivocada.
 
 ### Productos
 
@@ -364,19 +449,74 @@ primera página del catálogo completo. `productDescription` hace coincidencia
 parcial insensible a mayúsculas. `limit` tiene un tope de 100 para que nadie
 pueda pedir el catálogo entero de una sola vez.
 
+No hay filtro por `categoryId` todavía: `GET /dashboard/monthly-sales-by-category`
+cubre el caso de uso de reportar por categoría, y agregarlo a este filtro queda
+pendiente hasta que haya una necesidad concreta de listar productos por
+categoría.
+
+### Panel (dashboard)
+
+Indicadores de solo lectura para el front. Ninguno recibe cuerpo; todo viaja
+por la ruta o la query string.
+
+**Del mes en curso** — no reciben parámetros, y los `top-*` responden 200 con
+`null` cuando el mes todavía no tiene ventas (un tablero muestra "sin datos",
+no un error):
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/dashboard/total-sales` | Suma de totales y cantidad de comprobantes del mes |
+| `GET` | `/dashboard/top-product` | Producto con más unidades vendidas en el mes |
+| `GET` | `/dashboard/top-department` | Departamento con mayor monto comprado en el mes |
+| `GET` | `/dashboard/top-client` | Cliente con mayor monto comprado en el mes |
+
+**Series anuales**, para los diagramas del front — todas devuelven **los doce
+meses del año indicado**, incluidos los que no tuvieron ventas (con el importe
+en `"0.00"` o el producto en `null`), para que el eje del gráfico quede
+completo sin que el front tenga que rellenar huecos:
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/dashboard/monthly-sales?year=2026` | Ventas mensuales del año |
+| `GET` | `/dashboard/monthly-sales-by-ubigeo?year=2026&departmentId=15` | Ventas mensuales de una localidad |
+| `GET` | `/dashboard/monthly-sales-by-category?year=2026&categoryId=...` | Ventas mensuales de una categoría |
+| `GET` | `/dashboard/top-product-by-month?year=2026` | Producto más vendido de cada mes |
+
+```json
+{
+  "year": 2026,
+  "items": [
+    { "month": 1, "total": "0.00" },
+    { "month": 7, "total": "7061.12" }
+  ]
+}
+```
+
+`monthly-sales-by-ubigeo` acepta `departmentId` (obligatorio, 2 dígitos),
+`provinceId` (opcional, 4) y `districtId` (opcional, 6): sin los opcionales
+agrega todo el departamento; con ellos permite el filtro fino
+departamento → provincia → distrito. `year` se valida entre 2000 y 2100 en
+todos los endpoints de esta sección.
+
+Todas las consultas usan `generate_series(1, 12)` con `LEFT JOIN` hacia las
+ventas, en vez de un `GROUP BY` simple: así los meses sin ventas aparecen en la
+respuesta con cero, y no faltan del array. `monthly-sales-by-category` suma
+`sale_details.partial` —no `sales.total`— porque una misma venta puede mezclar
+productos de varias categorías.
+
 ## Respuestas
 
 | Código | Cuándo |
 |---|---|
 | `200` | Consulta resuelta, o modificación aplicada |
-| `201` | Recurso creado (producto, marca, cliente o venta) |
-| `204` | Producto eliminado. Sin cuerpo |
+| `201` | Recurso creado (producto, marca, categoría, cliente o venta) |
+| `204` | Producto, marca, categoría o cliente eliminados. Sin cuerpo |
 | `400` | Validación del cuerpo, UUID mal formado, rango de precio invertido, documento inválido |
 | `404` | El recurso solicitado no existe |
 | `409` | Conflicto: duplicado, recurso en uso, cliente o producto inactivo, serie agotada |
 | `422` | Error de dominio que no entra en las categorías anteriores |
 | `429` | Se superó el límite de peticiones (rate-limiting) |
-| `503` | `GET /health/db` cuando la base no responde |
+| `503` | `GET /health/db` cuando la base no responde, o el correo no está configurado o falla |
 | `500` | Fallo no previsto |
 
 Todos los errores comparten la misma forma:
@@ -397,12 +537,12 @@ texto de `message`, que puede reescribirse. Los códigos actuales son:
 
 | Categoría | Códigos |
 |---|---|
-| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND` |
-| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
-| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA` |
+| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CATEGORY_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND` |
+| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_IN_USE`, `CATEGORY_IN_USE`, `CLIENT_IN_USE`, `BRAND_ALREADY_EXISTS`, `CATEGORY_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
+| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CATEGORY_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA` |
 | Dominio genérico (422) | `INVALID_SALE`, `UNPROCESSABLE_ENTITY` |
 | Límite de peticiones (429) | `TOO_MANY_REQUESTS` |
-| Infraestructura | `SERVICE_UNAVAILABLE` (503), `INTERNAL_ERROR` (500) |
+| Infraestructura | `SERVICE_UNAVAILABLE` (503: base caída o correo no disponible), `INTERNAL_ERROR` (500) |
 
 En un `500` se agrega un `incidentId`. El detalle real queda en el log del
 servidor: al cliente no se le filtran trazas ni mensajes del driver.
@@ -440,13 +580,19 @@ Al escribir descripciones de Swagger, la regla es hablar en términos del negoci
 
 ### El 409 al eliminar
 
-`DELETE` es baja física. Si el producto ya aparece en `sale_details`, la clave
-foránea lo impide y la API responde 409 en lugar de un 500 con un error crudo de
-PostgreSQL. Borrarlo dejaría huérfanas esas líneas de venta y falsearía el
-histórico. Para retirar un producto de la venta conservando su historia:
+`DELETE` es baja física en productos, marcas, categorías y clientes. Si el
+recurso está referenciado por una clave foránea —un producto en
+`sale_details`, una marca o categoría en `products`, un cliente en `sales`—,
+PostgreSQL rechaza el `DELETE` y el adaptador traduce esa violación a 409 en
+vez de dejar pasar un 500 con un error crudo del driver. Borrarlo dejaría
+huérfanas esas filas y falsearía el histórico. Para retirar cualquiera de
+estos recursos conservando lo que depende de él, la baja lógica:
 
 ```
-PATCH /products/{productId}   {"productActive": false}
+PATCH /products/{productId}     {"productActive": false}
+PATCH /brands/{brandId}         {"brandActive": false}
+PATCH /categories/{categoryId}  {"categoryActive": false}
+PATCH /clients/{clientId}       {"clientActive": false}
 ```
 
 ### `PATCH` y la diferencia entre omitir y `null`
@@ -498,18 +644,26 @@ esquema van por SQL o por migraciones.
 
 | Archivo | Contenido |
 |---|---|
-| `db/db.sql` | Estructura: 10 tablas, restricciones e índices. Sin datos |
+| `db/db.sql` | Estructura: 11 tablas, restricciones e índices. Sin datos |
 | `db/db_ubigeo.sql` | Ubigeo INEI: 25 departamentos, 196 provincias, 1874 distritos |
-| `db/db_data.sql` | Catálogos de referencia, 100 clientes, 50 marcas y 500 productos |
+| `db/db_data.sql` | Catálogos de referencia, 100 clientes, 50 marcas, 11 categorías y 500 productos |
+| `db/sales/{2025,2026}/*.sql` | Ventas de prueba, un archivo por mes, de enero de 2025 a agosto de 2026 |
+| `db/run.mjs` | Runner en Node que ejecuta estos archivos en el orden correcto (ver [Puesta en marcha](#puesta-en-marcha)) |
 
-`db.sql` solo crea estructuras y `db_data.sql` solo inserta filas, así que
+`db.sql` solo crea estructuras y los demás solo insertan filas, así que
 recargar los datos no obliga a recrear el esquema. El ubigeo va aparte por
 volumen —2095 filas— y porque no son datos de prueba sino el padrón del INEI.
+Las ventas van en archivos separados por mes porque el correlativo de cada tipo
+de comprobante es una serie continua que no se reinicia por año: cada mes
+arranca donde terminó el anterior, así que **deben cargarse en orden
+cronológico** — motivo por el que existe `db/run.mjs` en vez de dejar que cada
+quien concatene los `.sql` a mano.
 
 Dentro de `db_data.sql`, los catálogos de referencia (`document_types` y
 `sale_types`) no son datos descartables: sin ellos `clients` no tiene a qué
 apuntar y la base queda inutilizable. Por eso van primero, antes de los datos de
-prueba propiamente dichos.
+prueba propiamente dichos. Las categorías van antes que los productos por la
+misma razón: `products.category_id` las referencia por clave foránea.
 
 ## Variables de entorno
 
@@ -528,9 +682,17 @@ Documentadas en `.env.example`.
 | `THROTTLE_TTL` | `60` | Ventana del rate-limiting, en segundos |
 | `THROTTLE_LIMIT` | `100` | Peticiones por IP y por endpoint en esa ventana |
 | `SWAGGER_ENABLED` | `true` | Solo apaga; nunca enciende en producción |
+| `MAIL_HOST` | — | Necesaria solo para `POST /sales/{saleId}/send-email` |
+| `MAIL_PORT` | `587` | `465` para SSL, `587` para STARTTLS |
+| `MAIL_SECURE` | `false` | `true` si `MAIL_PORT=465` |
+| `MAIL_USER` | — | Usuario SMTP |
+| `MAIL_PASSWORD` | — | Con Gmail y verificación en dos pasos, una *App Password*, no la contraseña de la cuenta |
+| `MAIL_FROM` | — | Remitente. Si se omite, se usa `MAIL_USER` |
 
-Si falta una obligatoria, el proceso corta al arrancar con un mensaje que la
-nombra, en vez de fallar más tarde con un error ilegible del driver.
+Si falta una obligatoria (las de PostgreSQL), el proceso corta al arrancar con
+un mensaje que la nombra, en vez de fallar más tarde con un error ilegible del
+driver. Las de correo no son obligatorias: la app arranca sin ellas y
+`send-email` responde 503 hasta que se completen.
 
 ## Comandos
 

@@ -49,7 +49,7 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   interferir con las sondas de salud.
 - Módulo `brands` con la misma arquitectura que `products`. Cuatro endpoints:
   listado paginado con filtros por query string, consulta individual, alta y
-  modificación parcial. No expone `DELETE`: la baja es lógica.
+  modificación parcial.
 - Columna `brands.brand_active` en `db/db.sql`, necesaria para la baja lógica.
   Lleva `DEFAULT true`, así que los `INSERT` del seed no cambian.
 - La descripción de marca es única ignorando mayúsculas y espacios; el alta o el
@@ -72,7 +72,7 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   clase.
 - Módulo `clients` con la misma arquitectura. Cuatro endpoints: listado paginado
   con filtros, consulta individual, alta y modificación parcial —que es donde se
-  activa o desactiva—. No expone `DELETE`: la baja es lógica.
+  activa o desactiva—.
 - El tipo y el número de documento se modelan como un único value object, de
   modo que la regla que los relaciona no puede quedar suelta: DNI de 8 dígitos,
   RUC de 11 empezando en 10 o 20, y validación general para tipos aún sin regla.
@@ -101,14 +101,66 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 - Tablas `document_types` y `sale_types` con sus datos de referencia, y las
   columnas `document_type_id` y `document_number` en `clients` con su clave
   foránea, restricción de formato y unicidad del documento.
+- Módulo `categories` con la misma arquitectura hexagonal que `brands`. Cinco
+  endpoints: listado paginado con filtros, consulta individual, alta,
+  modificación parcial y baja física. La descripción es única ignorando
+  mayúsculas y espacios, igual que en marcas; el alta o el renombrado duplicado
+  responden 409 `CATEGORY_ALREADY_EXISTS`.
+- `products.category_id` pasa a ser `NOT NULL`: todo producto pertenece a
+  exactamente una categoría, obligatoria en `POST /products` y opcional en
+  `PATCH`. Se valida su existencia igual que `brandId`, con un
+  `CategoryExistenceChecker` propio: no puede compartir el `exists` del
+  `BrandExistenceChecker` porque el tipo del argumento difiere.
+- `DELETE` en `brands`, `categories` y `clients`, con el mismo patrón que ya
+  tenía `products`: baja física que responde 409 (`BRAND_IN_USE`,
+  `CATEGORY_IN_USE`, `CLIENT_IN_USE`) si el recurso está referenciado por
+  clave foránea —productos para marca y categoría, ventas para cliente—, en
+  vez de dejar pasar el 500 crudo de PostgreSQL. `PATCH … Active: false` sigue
+  siendo la baja recomendada cuando el recurso ya tiene historial.
+- Módulo `dashboard` para indicadores del tablero. Cuatro endpoints del mes en
+  curso (`total-sales`, `top-product`, `top-department`, `top-client`, que
+  responden `null` cuando el mes todavía no tiene ventas) y cuatro series
+  anuales para los gráficos del front: `monthly-sales`,
+  `monthly-sales-by-ubigeo` (filtra por departamento y opcionalmente por
+  provincia y distrito), `monthly-sales-by-category` y `top-product-by-month`,
+  todas parametrizadas por `year` y siempre con los doce meses del año,
+  incluidos los que no tuvieron ventas (con el importe en `"0.00"` o el
+  producto en `null`). Las consultas usan `generate_series(1, 12)` con
+  `LEFT JOIN` hacia las ventas para que ningún mes falte del arreglo.
+- `GET /sales/{saleId}/pdf`: genera el comprobante en PDF con
+  [pdfkit](https://pdfkit.org/) —encabezado, cliente, localidad, tabla de
+  líneas con el nombre real del producto y totales— enteramente en memoria, y
+  lo devuelve codificado en base64. Se apoya en una vista de lectura nueva
+  (`SalePrintView`) que resuelve los nombres que el agregado `Sale` no tiene:
+  solo guarda identificadores.
+- `POST /sales/{saleId}/send-email`: genera el mismo PDF en memoria y lo
+  adjunta a un correo enviado por SMTP con
+  [nodemailer](https://nodemailer.com/), en un módulo `mail` nuevo detrás de un
+  puerto `Mailer`. Si faltan las variables `MAIL_*` o el servidor SMTP rechaza
+  el mensaje, responde 503 `SERVICE_UNAVAILABLE` con el motivo, no un 500
+  genérico.
+- Documentación con [Scalar](https://scalar.com/) en `/reference`, como
+  alternativa a Swagger UI. No genera un segundo documento OpenAPI: es una
+  página que embebe el bundle de Scalar por CDN apuntando al mismo
+  `/docs-json` que ya publica Swagger, así que hereda los mismos endpoints y
+  ejemplos. Se optó por el embed en vez del paquete
+  `@scalar/nestjs-api-reference` porque su build para CommonJS hace `require`
+  de una dependencia que solo se distribuye como ESM y hace fallar el arranque
+  bajo el CommonJS con el que corre este proyecto. Sujeta a la misma condición
+  que Swagger: no se publica en producción.
 
 #### Base de datos — esquema (`db/db.sql`)
 
-- Esquema PostgreSQL de `dbSales` con 10 tablas: `brands`, `products`, `clients`,
-  `document_types`, `sale_types`,
+- Esquema PostgreSQL de `dbSales` con 11 tablas: `brands`, `categories`,
+  `products`, `clients`, `document_types`, `sale_types`,
   `departments`, `provinces`, `districts`, `sales` y `sale_details`.
 - Claves primarias en todas las tablas. `sale_details` usa PK compuesta
   `(sale_id, item)`.
+- Tabla `categories` (`category_id`, `category_description` con `UNIQUE`,
+  `category_active` con `DEFAULT true`) y columna `products.category_id`
+  `NOT NULL` con su clave foránea `fk_products_category` e índice
+  `ix_products_category`. Va antes que `products` en el script porque
+  `products.category_id` la referencia.
 - Claves foráneas con la jerarquía de ubigeo completa. `sales` referencia
   provincia y distrito con FK **compuestas**, de modo que la base impide guardar
   una venta cuyo distrito no pertenezca al departamento elegido.
@@ -121,7 +173,7 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   - Importes y precios no negativos, `item` desde 1, `quantity` mayor que 0.
   - Códigos de ubigeo numéricos y con el prefijo del padre.
 - `UNIQUE` sobre `sale_number`.
-- 13 índices: sobre `product_name`, todas las columnas `*_description` y las
+- 15 índices: sobre `product_name`, todas las columnas `*_description` y las
   claves foráneas, que PostgreSQL no indexa automáticamente.
 - El script es reejecutable: hace `DROP` de todo antes de crear.
 
@@ -139,14 +191,39 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 #### Base de datos — datos (`db/db_data.sql`)
 
 - Catálogos de referencia (`document_types` y `sale_types`), 100 clientes,
-  50 marcas y 500 productos de informática: laptops y Mac,
-  smartphones, tablets, monitores, componentes, almacenamiento, periféricos,
-  audio, redes, impresión y accesorios.
+  50 marcas, 11 categorías y 500 productos de informática.
+- Las 11 categorías y cuántos productos tiene cada una: Componentes (84),
+  Periféricos (70), Almacenamiento (69), Monitores (59), Laptops y Mac (56),
+  Audio (39), Redes (35), Accesorios (33), Impresión (25), Smartphones (16) y
+  Tablets (14). La clasificación se hizo por el nombre comercial del producto
+  y no por la descripción larga: la descripción menciona detalles técnicos
+  ("cámara de 48MP", "parlantes cuadrafónicos") que arrastraban productos a la
+  categoría equivocada cuando se probó clasificar por ahí primero.
 - 25 productos y 10 clientes quedan inactivos, para que los filtros por estado
   tengan datos de ambos tipos sin necesidad de prepararlos.
 - Los datos de prueba se separaron de la estructura: `db/db.sql` solo crea
   tablas y `db/db_data.sql` solo inserta filas, así que recargar el catálogo no
   obliga a recrear el esquema.
+
+#### Base de datos — ventas (`db/sales/`)
+
+- Ventas de prueba en 20 archivos, uno por mes, de enero de 2025 a agosto de
+  2026 (`db/sales/2025/sales.2025-01.sql` … `db/sales/2026/sales.2026-08.sql`):
+  10 405 ventas y 31 073 líneas de detalle en total.
+- El correlativo de cada tipo de comprobante es una serie continua que no se
+  reinicia por año: cada archivo mensual arranca donde terminó el anterior, así
+  que **deben cargarse en orden cronológico** y no por orden alfabético de ruta
+  (`2026/sales.2026-01.sql` iría antes que `sales.2025-01.sql` si se ordenara
+  por ruta, porque `"2"` antecede a `"s"`).
+- `db/run.mjs`: runner en Node que reemplaza invocar `psql` a mano. Ejecuta
+  `db.sql`, `db_ubigeo.sql`, `db_data.sql` y los archivos de `db/sales/` en el
+  orden correcto —ordenando por el `YYYY-MM` del nombre, no por la ruta—, y
+  reutiliza el driver `pg` que ya usa el proyecto en vez de exigir tener `psql`
+  instalado. Admite `--create-db`, `--only=schema|reference|sales`,
+  `--month=YYYY-MM`, `--env=` para apuntar a otro archivo de variables, y
+  `--dry-run` para listar qué se ejecutaría sin tocar nada. Al terminar,
+  imprime cuántas filas quedaron por tabla y el último correlativo de cada
+  tipo de comprobante, para verificar la carga de un vistazo.
 
 ### Notas de diseño
 
@@ -172,11 +249,20 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 - Las URLs de `product_image` quedan como cadena vacía.
 - Los nombres de distrito están sin tildes: la fuente del padrón no las trae.
 - Evaluar unificar `sale_date` y `sale_hour` en un solo `timestamptz`.
-- `error-examples.ts` no tiene entrada para el recurso `sales`: el 404 y el 409
-  de ventas se documentan en Swagger con ejemplos genéricos en vez de con sus
-  códigos reales (`SALE_NOT_FOUND`, `CLIENT_INACTIVE`, etc.).
+- `error-examples.ts` no tiene entrada para los recursos `sales` ni
+  `categories`: su 404 y su 409 se documentan en Swagger con ejemplos
+  genéricos en vez de con sus códigos reales (`SALE_NOT_FOUND`,
+  `CATEGORY_IN_USE`, etc.).
 - El rate-limiting cuenta en memoria de cada proceso: detrás de un balanceador
   con varias réplicas el límite efectivo se multiplica. Para un límite
   compartido haría falta un almacén común (Redis), aún sin configurar.
+- `POST /products/query` no filtra por `categoryId`.
+  `GET /dashboard/monthly-sales-by-category` cubre el caso de reportar por
+  categoría; agregar el filtro queda para cuando haya una necesidad concreta
+  de listar productos por categoría.
+- La UI de Scalar en `/reference` carga su bundle desde
+  `cdn.jsdelivr.net`: el navegador necesita salida a internet para verla,
+  aunque el resto de la API funcione sin ella. Un self-host del bundle
+  eliminaría esa dependencia.
 
 [Sin publicar]: https://github.com/michaelvargas7/crud-ts-nest-be
