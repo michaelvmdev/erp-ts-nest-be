@@ -5,6 +5,7 @@ import {
   SwaggerModule,
   getSchemaPath,
 } from '@nestjs/swagger';
+
 import type { Request, Response } from 'express';
 import { ApiErrorDto } from './shared/infrastructure/http/api-error.dto';
 import { ejemploDeError } from './shared/infrastructure/http/error-examples';

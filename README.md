@@ -649,7 +649,6 @@ esquema van por SQL o por migraciones.
 | `db/db_data.sql` | Catálogos de referencia, 100 clientes, 50 marcas, 11 categorías y 500 productos |
 | `db/sales/{2025,2026}/*.sql` | Ventas de prueba, un archivo por mes, de enero de 2025 a agosto de 2026 |
 | `db/run.mjs` | Runner en Node que ejecuta estos archivos en el orden correcto (ver [Puesta en marcha](#puesta-en-marcha)) |
-
 `db.sql` solo crea estructuras y los demás solo insertan filas, así que
 recargar los datos no obliga a recrear el esquema. El ubigeo va aparte por
 volumen —2095 filas— y porque no son datos de prueba sino el padrón del INEI.
