@@ -15,6 +15,7 @@ import { HealthModule } from './health/health.module';
 import { ProductsModule } from './products/products.module';
 import { SaleTypesModule } from './sale-types/sale-types.module';
 import { SalesModule } from './sales/sales.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
 import { UbigeoModule } from './ubigeo/ubigeo.module';
 
 @Module({
@@ -51,6 +52,7 @@ import { UbigeoModule } from './ubigeo/ubigeo.module';
     ProductsModule,
     SaleTypesModule,
     SalesModule,
+    SuppliersModule,
     UbigeoModule,
     DashboardModule,
   ],
