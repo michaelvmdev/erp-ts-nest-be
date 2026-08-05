@@ -7,6 +7,7 @@ import { GetTopDepartmentUseCase } from './application/get-top-department.use-ca
 import { GetTopProductUseCase } from './application/get-top-product.use-case';
 import { GetTopProductByMonthUseCase } from './application/get-top-product-by-month.use-case';
 import { GetTotalSalesUseCase } from './application/get-total-sales.use-case';
+import { GetYearlySalesUseCase } from './application/get-yearly-sales.use-case';
 import { DASHBOARD_REPOSITORY } from './domain/dashboard.repository';
 import { DashboardController } from './infrastructure/http/dashboard.controller';
 import { TypeOrmDashboardRepository } from './infrastructure/persistence/typeorm-dashboard.repository';
@@ -33,6 +34,7 @@ import { TypeOrmDashboardRepository } from './infrastructure/persistence/typeorm
     GetMonthlySalesByUbigeoUseCase,
     GetMonthlySalesByCategoryUseCase,
     GetTopProductByMonthUseCase,
+    GetYearlySalesUseCase,
   ],
 })
 export class DashboardModule {}

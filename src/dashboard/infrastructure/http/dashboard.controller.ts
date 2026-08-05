@@ -14,6 +14,7 @@ import { GetTopDepartmentUseCase } from '../../application/get-top-department.us
 import { GetTopProductUseCase } from '../../application/get-top-product.use-case';
 import { GetTopProductByMonthUseCase } from '../../application/get-top-product-by-month.use-case';
 import { GetTotalSalesUseCase } from '../../application/get-total-sales.use-case';
+import { GetYearlySalesUseCase } from '../../application/get-yearly-sales.use-case';
 import { MonthlySalesByCategoryQueryDto } from './dto/monthly-sales-by-category.query.dto';
 import { MonthlySalesByUbigeoQueryDto } from './dto/monthly-sales-by-ubigeo.query.dto';
 import { MonthlySalesResponseDto } from './dto/monthly-sales.response.dto';
@@ -23,6 +24,7 @@ import { TopProductByMonthResponseDto } from './dto/top-product-by-month.respons
 import { TopProductResponseDto } from './dto/top-product.response.dto';
 import { TotalSalesResponseDto } from './dto/total-sales.response.dto';
 import { YearQueryDto } from './dto/year.query.dto';
+import { YearlySalesResponseDto } from './dto/yearly-sales.response.dto';
 
 /**
  * Indicadores del mes actual para el tablero del front.
@@ -44,6 +46,7 @@ export class DashboardController {
     private readonly getMonthlySalesByUbigeo: GetMonthlySalesByUbigeoUseCase,
     private readonly getMonthlySalesByCategory: GetMonthlySalesByCategoryUseCase,
     private readonly getTopProductByMonth: GetTopProductByMonthUseCase,
+    private readonly getYearlySales: GetYearlySalesUseCase,
   ) {}
 
   @Get('total-sales')
@@ -54,7 +57,8 @@ export class DashboardController {
       'Suma de los totales y cantidad de comprobantes emitidos en el mes en curso.',
   })
   @ApiOkResponse({
-    description: 'Ventas del mes. Con cero ventas, `amount` es "0.00" y `count` 0.',
+    description:
+      'Ventas del mes. Con cero ventas, `amount` es "0.00" y `count` 0.',
     type: TotalSalesResponseDto,
   })
   async totalSales(): Promise<TotalSalesResponseDto> {
@@ -214,5 +218,22 @@ export class DashboardController {
   ): Promise<TopProductByMonthResponseDto> {
     const rows = await this.getTopProductByMonth.execute(query.year);
     return TopProductByMonthResponseDto.build(query.year, rows);
+  }
+
+  @Get('yearly-sales')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Ventas por ano',
+    description:
+      'Suma de los totales de venta por ano, sin filtros. Diagrama lineal ' +
+      '"Ventas por Ano": [year, total].',
+  })
+  @ApiOkResponse({
+    description: 'Serie de anos en orden ascendente con el total de cada uno.',
+    type: YearlySalesResponseDto,
+  })
+  async yearlySales(): Promise<YearlySalesResponseDto> {
+    const rows = await this.getYearlySales.execute();
+    return YearlySalesResponseDto.build(rows);
   }
 }

@@ -10,6 +10,7 @@ import {
   TopProduct,
   TotalSales,
   UbigeoFilter,
+  YearlyAmount,
 } from '../../domain/dashboard.repository';
 import { MonthPeriod } from '../../domain/month-period';
 import { YearPeriod } from '../../domain/year-period';
@@ -263,5 +264,29 @@ export class TypeOrmDashboardRepository implements DashboardRepository {
       productDescription: f.productDescription,
       unitsSold: f.unitsSold ?? 0,
     }));
+  }
+
+  async yearlySales(): Promise<YearlyAmount[]> {
+    const filas: Array<{ year: number; total: string }> =
+      await this.dataSource.query(
+        `WITH bounds AS (
+           SELECT COALESCE(MIN(EXTRACT(YEAR FROM sale_date)::int), EXTRACT(YEAR FROM CURRENT_DATE)::int) AS min_year,
+                  GREATEST(
+                    COALESCE(MAX(EXTRACT(YEAR FROM sale_date)::int), EXTRACT(YEAR FROM CURRENT_DATE)::int),
+                    EXTRACT(YEAR FROM CURRENT_DATE)::int
+                  ) AS max_year
+             FROM sales
+         )
+         SELECT y.year                         AS "year",
+                COALESCE(SUM(s.total), 0.00)::text AS "total"
+           FROM bounds b
+          CROSS JOIN generate_series(b.min_year, b.max_year) AS y(year)
+           LEFT JOIN sales s
+             ON EXTRACT(YEAR FROM s.sale_date)::int = y.year
+          GROUP BY y.year
+          ORDER BY y.year`,
+      );
+
+    return filas.map((f) => ({ year: f.year, total: f.total }));
   }
 }

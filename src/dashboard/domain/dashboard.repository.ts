@@ -51,6 +51,13 @@ export interface MonthlyAmount {
   total: string;
 }
 
+export interface YearlyAmount {
+  /** Ano calendario de la venta. */
+  year: number;
+  /** Suma de importes del ano. Cadena decimal; "0.00" si no hubo ventas. */
+  total: string;
+}
+
 export interface MonthlyTopProduct {
   /** Mes del 1 (enero) al 12 (diciembre). */
   month: number;
@@ -93,6 +100,7 @@ export interface DashboardRepository {
     categoryId: string,
   ): Promise<MonthlyAmount[]>;
   topProductByMonth(period: YearPeriod): Promise<MonthlyTopProduct[]>;
+  yearlySales(): Promise<YearlyAmount[]>;
 }
 
 export const DASHBOARD_REPOSITORY = Symbol('DashboardRepository');
