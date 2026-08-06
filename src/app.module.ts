@@ -13,6 +13,7 @@ import { DatabaseModule } from './database/database.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { HealthModule } from './health/health.module';
 import { ProductsModule } from './products/products.module';
+import { PurchasesModule } from './purchases/purchases.module';
 import { SaleTypesModule } from './sale-types/sale-types.module';
 import { SalesModule } from './sales/sales.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
@@ -50,6 +51,7 @@ import { UbigeoModule } from './ubigeo/ubigeo.module';
     BrandsModule,
     CategoriesModule,
     ProductsModule,
+    PurchasesModule,
     SaleTypesModule,
     SalesModule,
     SuppliersModule,
