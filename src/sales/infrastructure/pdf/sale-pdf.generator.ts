@@ -58,18 +58,18 @@ export class SalePdfGenerator implements SalePdfRenderer {
   }
 
   private encabezado(doc: PDFKit.PDFDocument, v: SalePrintView): void {
-    // Emisor a la izquierda.
+    // Emisor a la izquierda: la empresa que emite el comprobante.
     doc
       .fillColor(COLOR.accent)
       .font('Helvetica-Bold')
       .fontSize(20)
-      .text('dbSales', MARGIN, MARGIN);
+      .text('Michael Dev S.A.C.', MARGIN, MARGIN);
     doc
       .fillColor(COLOR.soft)
       .font('Helvetica')
       .fontSize(9)
       .text('Tienda de tecnologia', MARGIN, MARGIN + 24)
-      .text('RUC 20123456789', MARGIN, MARGIN + 36);
+      .text('RUC 20601054702', MARGIN, MARGIN + 36);
 
     // Recuadro del comprobante a la derecha.
     const bx = 360;
@@ -236,7 +236,7 @@ export class SalePdfGenerator implements SalePdfRenderer {
       .font('Helvetica')
       .fontSize(8)
       .text(
-        'Documento generado automaticamente por dbSales. Representacion impresa del comprobante electronico.',
+        'Documento generado automaticamente por AppSales. Representacion impresa del comprobante electronico.',
         MARGIN,
         y + 6,
         { width: this.right - MARGIN, align: 'center' },

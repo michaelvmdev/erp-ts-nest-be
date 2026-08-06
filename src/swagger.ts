@@ -177,10 +177,12 @@ function ejemplificarErrores(document: OpenAPIObject): OpenAPIObject {
 
 export function setupSwagger(app: INestApplication): void {
   const config = new DocumentBuilder()
-    .setTitle('dbSales API')
+    .setTitle('AppSales API')
     .setDescription(
-      'API de ventas: productos, marcas, clientes, ubigeo y comprobantes. ' +
-        'Esta documentacion solo se publica fuera de produccion.',
+      'API de AppSales, el sistema de ventas y compras de Michael Dev S.A.C.: ' +
+        'productos, marcas, categorias, proveedores, clientes, ubigeo, ' +
+        'comprobantes y compras. Esta documentacion solo se publica fuera de ' +
+        'produccion.',
     )
     // npm expone la version del package.json al correr por script; el valor de
     // respaldo cubre el caso de ejecutar `node dist/main.js` a mano.
@@ -208,7 +210,7 @@ export function setupSwagger(app: INestApplication): void {
     );
 
   SwaggerModule.setup(SWAGGER_PATH, app, documentFactory, {
-    customSiteTitle: 'dbSales API — docs',
+    customSiteTitle: 'AppSales API — docs',
     swaggerOptions: {
       // Conserva el token entre recargas de la pagina.
       persistAuthorization: true,
@@ -236,7 +238,7 @@ function paginaScalar(): string {
   return `<!doctype html>
 <html>
   <head>
-    <title>dbSales API — reference</title>
+    <title>AppSales API — reference</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>body { margin: 0; }</style>

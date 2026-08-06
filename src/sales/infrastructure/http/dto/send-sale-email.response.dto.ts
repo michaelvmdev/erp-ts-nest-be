@@ -10,7 +10,7 @@ export class SendSaleEmailResponseDto {
   to!: string;
 
   @ApiProperty({
-    example: '<a1b2c3@dbsales.local>',
+    example: '<a1b2c3@appsales.local>',
     description: 'Identificador del mensaje que devuelve el servidor SMTP.',
   })
   messageId!: string;

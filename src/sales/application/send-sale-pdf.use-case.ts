@@ -44,7 +44,7 @@ export class SendSalePdfUseCase {
       text:
         `Hola ${view.client.description},\n\n` +
         `Adjuntamos tu comprobante ${view.saleNumber} por un total de S/ ${view.total}.\n\n` +
-        'Gracias por tu compra.\ndbSales',
+        'Gracias por tu compra.\nMichael Dev S.A.C.\nEnviado con AppSales',
       attachments: [
         { filename: fileName, content: pdf, contentType: 'application/pdf' },
       ],
