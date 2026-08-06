@@ -2,18 +2,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MonthPeriod } from '../domain/month-period';
 import {
   DASHBOARD_REPOSITORY,
-  TopClient,
+  TotalPurchases,
 } from '../domain/dashboard.repository';
 import type { DashboardRepository } from '../domain/dashboard.repository';
 
 @Injectable()
-export class GetTopClientUseCase {
+export class GetTotalPurchasesUseCase {
   constructor(
     @Inject(DASHBOARD_REPOSITORY)
     private readonly dashboard: DashboardRepository,
   ) {}
 
-  execute(): Promise<TopClient | null> {
-    return this.dashboard.topClient(MonthPeriod.current());
+  execute(): Promise<TotalPurchases> {
+    return this.dashboard.totalPurchases(MonthPeriod.current());
   }
 }

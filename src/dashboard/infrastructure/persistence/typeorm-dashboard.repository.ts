@@ -5,9 +5,13 @@ import {
   DashboardRepository,
   MonthlyAmount,
   MonthlyTopProduct,
+  MonthlyTopPurchasedProduct,
   TopClient,
   TopDepartment,
   TopProduct,
+  TopPurchasedProduct,
+  TopSupplier,
+  TotalPurchases,
   TotalSales,
   UbigeoFilter,
   YearlyAmount,
@@ -283,6 +287,198 @@ export class TypeOrmDashboardRepository implements DashboardRepository {
           CROSS JOIN generate_series(b.min_year, b.max_year) AS y(year)
            LEFT JOIN sales s
              ON EXTRACT(YEAR FROM s.sale_date)::int = y.year
+          GROUP BY y.year
+          ORDER BY y.year`,
+      );
+
+    return filas.map((f) => ({ year: f.year, total: f.total }));
+  }
+
+  // ==========================================================================
+  //  Compras
+  //  Mismas consultas que ventas contra las tablas `purchases` /
+  //  `purchase_details`. Se filtra por `purchase_date` y el importe sale de
+  //  `purchases.total` (o `purchase_details.partial` por categoria). El "quien"
+  //  ya no es el cliente sino el proveedor (`suppliers`).
+  // ==========================================================================
+
+  async totalPurchases(period: MonthPeriod): Promise<TotalPurchases> {
+    const filas: Array<{ amount: string; count: number }> =
+      await this.dataSource.query(
+        `SELECT COALESCE(SUM(total), 0.00)::text AS amount,
+                COUNT(*)::int                    AS count
+           FROM purchases
+          WHERE purchase_date >= $1 AND purchase_date < $2`,
+        [period.start, period.endExclusive],
+      );
+
+    const fila = filas[0];
+    return { period: period.label, amount: fila.amount, count: fila.count };
+  }
+
+  async topPurchasedProduct(
+    period: MonthPeriod,
+  ): Promise<TopPurchasedProduct | null> {
+    const filas: Array<{
+      productId: string;
+      productName: string;
+      unitsPurchased: number;
+    }> = await this.dataSource.query(
+      `SELECT pd.product_id         AS "productId",
+              p.product_name        AS "productName",
+              SUM(pd.quantity)::int AS "unitsPurchased"
+         FROM purchase_details pd
+         JOIN purchases pu ON pu.purchase_id = pd.purchase_id
+         JOIN products p   ON p.product_id   = pd.product_id
+        WHERE pu.purchase_date >= $1 AND pu.purchase_date < $2
+        GROUP BY pd.product_id, p.product_name
+        ORDER BY SUM(pd.quantity) DESC, pd.product_id ASC
+        LIMIT 1`,
+      [period.start, period.endExclusive],
+    );
+
+    if (filas.length === 0) return null;
+    const f = filas[0];
+    return {
+      period: period.label,
+      productId: f.productId,
+      productName: f.productName,
+      unitsPurchased: f.unitsPurchased,
+    };
+  }
+
+  async topSupplier(period: MonthPeriod): Promise<TopSupplier | null> {
+    const filas: Array<{
+      supplierId: string;
+      supplierDescription: string;
+      totalAmount: string;
+    }> = await this.dataSource.query(
+      `SELECT pu.supplier_id          AS "supplierId",
+              s.supplier_description  AS "supplierDescription",
+              SUM(pu.total)::text     AS "totalAmount"
+         FROM purchases pu
+         JOIN suppliers s ON s.supplier_id = pu.supplier_id
+        WHERE pu.purchase_date >= $1 AND pu.purchase_date < $2
+        GROUP BY pu.supplier_id, s.supplier_description
+        ORDER BY SUM(pu.total) DESC, pu.supplier_id ASC
+        LIMIT 1`,
+      [period.start, period.endExclusive],
+    );
+
+    if (filas.length === 0) return null;
+    const f = filas[0];
+    return {
+      period: period.label,
+      supplierId: f.supplierId,
+      supplierDescription: f.supplierDescription,
+      totalAmount: f.totalAmount,
+    };
+  }
+
+  async monthlyPurchases(period: YearPeriod): Promise<MonthlyAmount[]> {
+    const filas: Array<{ month: number; total: string }> =
+      await this.dataSource.query(
+        `SELECT m.month                            AS "month",
+                COALESCE(SUM(pu.total), 0.00)::text AS "total"
+           FROM generate_series(1, 12) AS m(month)
+           LEFT JOIN purchases pu
+             ON EXTRACT(MONTH FROM pu.purchase_date)::int = m.month
+            AND pu.purchase_date >= $1 AND pu.purchase_date < $2
+          GROUP BY m.month
+          ORDER BY m.month`,
+        [period.start, period.endExclusive],
+      );
+
+    return filas.map((f) => ({ month: f.month, total: f.total }));
+  }
+
+  async monthlyPurchasesByCategory(
+    period: YearPeriod,
+    categoryId: string,
+  ): Promise<MonthlyAmount[]> {
+    // El total por categoria se suma sobre purchase_details.partial (importe de
+    // linea), no sobre purchases.total, porque una compra puede mezclar
+    // categorias. La subconsulta ya filtra por categoria; el LEFT JOIN rellena.
+    const filas: Array<{ month: number; total: string }> =
+      await this.dataSource.query(
+        `SELECT m.month                             AS "month",
+                COALESCE(SUM(x.partial), 0.00)::text AS "total"
+           FROM generate_series(1, 12) AS m(month)
+           LEFT JOIN (
+             SELECT EXTRACT(MONTH FROM pu.purchase_date)::int AS month,
+                    pd.partial                                AS partial
+               FROM purchase_details pd
+               JOIN purchases pu ON pu.purchase_id = pd.purchase_id
+               JOIN products p   ON p.product_id   = pd.product_id
+              WHERE pu.purchase_date >= $1 AND pu.purchase_date < $2
+                AND p.category_id = $3
+           ) x ON x.month = m.month
+          GROUP BY m.month
+          ORDER BY m.month`,
+        [period.start, period.endExclusive, categoryId],
+      );
+
+    return filas.map((f) => ({ month: f.month, total: f.total }));
+  }
+
+  async topPurchasedProductByMonth(
+    period: YearPeriod,
+  ): Promise<MonthlyTopPurchasedProduct[]> {
+    const filas: Array<{
+      month: number;
+      productId: string | null;
+      productName: string | null;
+      productDescription: string | null;
+      unitsPurchased: number | null;
+    }> = await this.dataSource.query(
+      `SELECT m.month                    AS "month",
+              tp.product_id              AS "productId",
+              p.product_name             AS "productName",
+              p.product_description      AS "productDescription",
+              tp.units_purchased         AS "unitsPurchased"
+         FROM generate_series(1, 12) AS m(month)
+         LEFT JOIN LATERAL (
+           SELECT pd.product_id,
+                  SUM(pd.quantity)::int AS units_purchased
+             FROM purchase_details pd
+             JOIN purchases pu ON pu.purchase_id = pd.purchase_id
+            WHERE pu.purchase_date >= $1 AND pu.purchase_date < $2
+              AND EXTRACT(MONTH FROM pu.purchase_date)::int = m.month
+            GROUP BY pd.product_id
+            ORDER BY SUM(pd.quantity) DESC, pd.product_id ASC
+            LIMIT 1
+         ) tp ON true
+         LEFT JOIN products p ON p.product_id = tp.product_id
+        ORDER BY m.month`,
+      [period.start, period.endExclusive],
+    );
+
+    return filas.map((f) => ({
+      month: f.month,
+      productId: f.productId,
+      productName: f.productName,
+      productDescription: f.productDescription,
+      unitsPurchased: f.unitsPurchased ?? 0,
+    }));
+  }
+
+  async yearlyPurchases(): Promise<YearlyAmount[]> {
+    const filas: Array<{ year: number; total: string }> =
+      await this.dataSource.query(
+        `WITH bounds AS (
+           SELECT COALESCE(MIN(EXTRACT(YEAR FROM purchase_date)::int), EXTRACT(YEAR FROM CURRENT_DATE)::int) AS min_year,
+                  GREATEST(
+                    COALESCE(MAX(EXTRACT(YEAR FROM purchase_date)::int), EXTRACT(YEAR FROM CURRENT_DATE)::int),
+                    EXTRACT(YEAR FROM CURRENT_DATE)::int
+                  ) AS max_year
+             FROM purchases
+         )
+         SELECT y.year                          AS "year",
+                COALESCE(SUM(pu.total), 0.00)::text AS "total"
+           FROM bounds b
+          CROSS JOIN generate_series(b.min_year, b.max_year) AS y(year)
+           LEFT JOIN purchases pu
+             ON EXTRACT(YEAR FROM pu.purchase_date)::int = y.year
           GROUP BY y.year
           ORDER BY y.year`,
       );

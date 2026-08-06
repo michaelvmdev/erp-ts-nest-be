@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TopDepartment } from '../../../domain/dashboard.repository';
 
 export class TopDepartmentResponseDto {
-  @ApiProperty({ example: '2026-07', description: 'Mes de la métrica (YYYY-MM).' })
+  @ApiProperty({
+    example: '2026-07',
+    description: 'Mes de la métrica (YYYY-MM).',
+  })
   period!: string;
 
   @ApiProperty({

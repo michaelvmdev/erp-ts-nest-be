@@ -9,22 +9,36 @@ import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { GetMonthlySalesUseCase } from '../../application/get-monthly-sales.use-case';
 import { GetMonthlySalesByCategoryUseCase } from '../../application/get-monthly-sales-by-category.use-case';
 import { GetMonthlySalesByUbigeoUseCase } from '../../application/get-monthly-sales-by-ubigeo.use-case';
+import { GetMonthlyPurchasesUseCase } from '../../application/get-monthly-purchases.use-case';
+import { GetMonthlyPurchasesByCategoryUseCase } from '../../application/get-monthly-purchases-by-category.use-case';
 import { GetTopClientUseCase } from '../../application/get-top-client.use-case';
 import { GetTopDepartmentUseCase } from '../../application/get-top-department.use-case';
 import { GetTopProductUseCase } from '../../application/get-top-product.use-case';
 import { GetTopProductByMonthUseCase } from '../../application/get-top-product-by-month.use-case';
+import { GetTopPurchasedProductUseCase } from '../../application/get-top-purchased-product.use-case';
+import { GetTopPurchasedProductByMonthUseCase } from '../../application/get-top-purchased-product-by-month.use-case';
+import { GetTopSupplierUseCase } from '../../application/get-top-supplier.use-case';
 import { GetTotalSalesUseCase } from '../../application/get-total-sales.use-case';
+import { GetTotalPurchasesUseCase } from '../../application/get-total-purchases.use-case';
 import { GetYearlySalesUseCase } from '../../application/get-yearly-sales.use-case';
+import { GetYearlyPurchasesUseCase } from '../../application/get-yearly-purchases.use-case';
 import { MonthlySalesByCategoryQueryDto } from './dto/monthly-sales-by-category.query.dto';
 import { MonthlySalesByUbigeoQueryDto } from './dto/monthly-sales-by-ubigeo.query.dto';
 import { MonthlySalesResponseDto } from './dto/monthly-sales.response.dto';
+import { MonthlyPurchasesByCategoryQueryDto } from './dto/monthly-purchases-by-category.query.dto';
+import { MonthlyPurchasesResponseDto } from './dto/monthly-purchases.response.dto';
 import { TopClientResponseDto } from './dto/top-client.response.dto';
 import { TopDepartmentResponseDto } from './dto/top-department.response.dto';
 import { TopProductByMonthResponseDto } from './dto/top-product-by-month.response.dto';
 import { TopProductResponseDto } from './dto/top-product.response.dto';
+import { TopPurchasedProductByMonthResponseDto } from './dto/top-purchased-product-by-month.response.dto';
+import { TopPurchasedProductResponseDto } from './dto/top-purchased-product.response.dto';
+import { TopSupplierResponseDto } from './dto/top-supplier.response.dto';
 import { TotalSalesResponseDto } from './dto/total-sales.response.dto';
+import { TotalPurchasesResponseDto } from './dto/total-purchases.response.dto';
 import { YearQueryDto } from './dto/year.query.dto';
 import { YearlySalesResponseDto } from './dto/yearly-sales.response.dto';
+import { YearlyPurchasesResponseDto } from './dto/yearly-purchases.response.dto';
 
 /**
  * Indicadores del mes actual para el tablero del front.
@@ -47,6 +61,13 @@ export class DashboardController {
     private readonly getMonthlySalesByCategory: GetMonthlySalesByCategoryUseCase,
     private readonly getTopProductByMonth: GetTopProductByMonthUseCase,
     private readonly getYearlySales: GetYearlySalesUseCase,
+    private readonly getTotalPurchases: GetTotalPurchasesUseCase,
+    private readonly getTopPurchasedProduct: GetTopPurchasedProductUseCase,
+    private readonly getTopSupplier: GetTopSupplierUseCase,
+    private readonly getMonthlyPurchases: GetMonthlyPurchasesUseCase,
+    private readonly getMonthlyPurchasesByCategory: GetMonthlyPurchasesByCategoryUseCase,
+    private readonly getTopPurchasedProductByMonth: GetTopPurchasedProductByMonthUseCase,
+    private readonly getYearlyPurchases: GetYearlyPurchasesUseCase,
   ) {}
 
   @Get('total-sales')
@@ -235,5 +256,153 @@ export class DashboardController {
   async yearlySales(): Promise<YearlySalesResponseDto> {
     const rows = await this.getYearlySales.execute();
     return YearlySalesResponseDto.build(rows);
+  }
+
+  // ==========================================================================
+  //  Compras
+  //  Los mismos indicadores y diagramas que ventas, ahora sobre `purchases`.
+  //  No hay contrapartes de "top-department" ni "monthly-sales-by-ubigeo":
+  //  las compras no tienen ubigeo. El "quien" del mes es el proveedor.
+  // ==========================================================================
+
+  @Get('total-purchases')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Compras totales del mes',
+    description:
+      'Suma de los totales y cantidad de compras registradas en el mes en curso.',
+  })
+  @ApiOkResponse({
+    description:
+      'Compras del mes. Sin compras, `amount` es "0.00" y `count` 0.',
+    type: TotalPurchasesResponseDto,
+  })
+  async totalPurchases(): Promise<TotalPurchasesResponseDto> {
+    const m = await this.getTotalPurchases.execute();
+    return TotalPurchasesResponseDto.fromReadModel(m);
+  }
+
+  @Get('top-purchased-product')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Producto más comprado del mes',
+    description:
+      'Producto con más unidades compradas en el mes en curso, sumando todas las compras.',
+  })
+  @ApiOkResponse({
+    description: 'Producto más comprado, o `null` si el mes no tiene compras.',
+    type: TopPurchasedProductResponseDto,
+  })
+  async topPurchasedProduct(): Promise<TopPurchasedProductResponseDto | null> {
+    const m = await this.getTopPurchasedProduct.execute();
+    return m ? TopPurchasedProductResponseDto.fromReadModel(m) : null;
+  }
+
+  @Get('top-supplier')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Proveedor con más compras del mes',
+    description:
+      'Proveedor con mayor monto total comprado en el mes en curso. Contraparte ' +
+      'de "top-client" del lado de ventas.',
+  })
+  @ApiOkResponse({
+    description: 'Proveedor líder, o `null` si el mes no tiene compras.',
+    type: TopSupplierResponseDto,
+  })
+  async topSupplier(): Promise<TopSupplierResponseDto | null> {
+    const m = await this.getTopSupplier.execute();
+    return m ? TopSupplierResponseDto.fromReadModel(m) : null;
+  }
+
+  @Get('monthly-purchases')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Compras mensuales del ano',
+    description:
+      'Suma de los totales de compra por mes para el ano indicado. Diagrama ' +
+      '"Compras Mensuales del Ano YYYY": [month, total].',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el total de cada uno.',
+    type: MonthlyPurchasesResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano falta o esta fuera de rango.',
+    type: ApiErrorDto,
+  })
+  async monthlyPurchases(
+    @Query() query: YearQueryDto,
+  ): Promise<MonthlyPurchasesResponseDto> {
+    const rows = await this.getMonthlyPurchases.execute(query.year);
+    return MonthlyPurchasesResponseDto.build(query.year, rows);
+  }
+
+  @Get('monthly-purchases-by-category')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Compras mensuales por categoria del ano',
+    description:
+      'Suma de los importes de linea (purchase_details) por mes para los ' +
+      'productos de la categoria indicada. Diagrama "Compras Totales por ' +
+      'Categoria del Ano YYYY".',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el total de la categoria en cada uno.',
+    type: MonthlyPurchasesResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano o el categoryId es invalido.',
+    type: ApiErrorDto,
+  })
+  async monthlyPurchasesByCategory(
+    @Query() query: MonthlyPurchasesByCategoryQueryDto,
+  ): Promise<MonthlyPurchasesResponseDto> {
+    const rows = await this.getMonthlyPurchasesByCategory.execute(
+      query.year,
+      query.categoryId,
+    );
+    return MonthlyPurchasesResponseDto.build(query.year, rows);
+  }
+
+  @Get('top-purchased-product-by-month')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Producto mas comprado por mes del ano',
+    description:
+      'Producto con mas unidades compradas en cada mes del ano. Diagrama ' +
+      '"Producto mas comprado por Mes del Ano YYYY": [month, productDescription]. ' +
+      'Los meses sin compras traen el producto en null.',
+  })
+  @ApiOkResponse({
+    description: 'Serie de 12 meses con el producto lider de cada uno.',
+    type: TopPurchasedProductByMonthResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El ano falta o esta fuera de rango.',
+    type: ApiErrorDto,
+  })
+  async topPurchasedProductByMonth(
+    @Query() query: YearQueryDto,
+  ): Promise<TopPurchasedProductByMonthResponseDto> {
+    const rows = await this.getTopPurchasedProductByMonth.execute(query.year);
+    return TopPurchasedProductByMonthResponseDto.build(query.year, rows);
+  }
+
+  @Get('yearly-purchases')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Compras por ano',
+    description:
+      'Suma de los totales de compra por ano, sin filtros. Diagrama lineal ' +
+      '"Compras por Ano": [year, total].',
+  })
+  @ApiOkResponse({
+    description: 'Serie de anos en orden ascendente con el total de cada uno.',
+    type: YearlyPurchasesResponseDto,
+  })
+  async yearlyPurchases(): Promise<YearlyPurchasesResponseDto> {
+    const rows = await this.getYearlyPurchases.execute();
+    return YearlyPurchasesResponseDto.build(rows);
   }
 }

@@ -77,6 +77,44 @@ export interface UbigeoFilter {
 }
 
 /**
+ * Read models del lado de compras. Espejan a los de ventas, con dos diferencias
+ * que impone el modelo de datos: la contraparte de "cliente" es el proveedor
+ * (`suppliers`), y las compras no tienen ubigeo, asi que no hay indicador por
+ * departamento ni serie por localidad.
+ */
+
+export interface TotalPurchases {
+  period: string;
+  amount: string;
+  count: number;
+}
+
+export interface TopPurchasedProduct {
+  period: string;
+  productId: string;
+  productName: string;
+  unitsPurchased: number;
+}
+
+export interface TopSupplier {
+  period: string;
+  supplierId: string;
+  supplierDescription: string;
+  totalAmount: string;
+}
+
+export interface MonthlyTopPurchasedProduct {
+  /** Mes del 1 (enero) al 12 (diciembre). */
+  month: number;
+  /** `null` si el mes no tuvo compras. */
+  productId: string | null;
+  productName: string | null;
+  productDescription: string | null;
+  /** Unidades del producto mas comprado en el mes; 0 si no hubo compras. */
+  unitsPurchased: number;
+}
+
+/**
  * Puerto de salida del tablero.
  *
  * Los `top*` devuelven `null` cuando el mes no tiene ventas: un tablero muestra
@@ -101,6 +139,22 @@ export interface DashboardRepository {
   ): Promise<MonthlyAmount[]>;
   topProductByMonth(period: YearPeriod): Promise<MonthlyTopProduct[]>;
   yearlySales(): Promise<YearlyAmount[]>;
+
+  // Lado de compras. Mismos criterios que ventas: los `top*` devuelven `null`
+  // cuando el mes no tiene compras y las series anuales traen siempre 12 meses.
+  totalPurchases(period: MonthPeriod): Promise<TotalPurchases>;
+  topPurchasedProduct(period: MonthPeriod): Promise<TopPurchasedProduct | null>;
+  topSupplier(period: MonthPeriod): Promise<TopSupplier | null>;
+
+  monthlyPurchases(period: YearPeriod): Promise<MonthlyAmount[]>;
+  monthlyPurchasesByCategory(
+    period: YearPeriod,
+    categoryId: string,
+  ): Promise<MonthlyAmount[]>;
+  topPurchasedProductByMonth(
+    period: YearPeriod,
+  ): Promise<MonthlyTopPurchasedProduct[]>;
+  yearlyPurchases(): Promise<YearlyAmount[]>;
 }
 
 export const DASHBOARD_REPOSITORY = Symbol('DashboardRepository');

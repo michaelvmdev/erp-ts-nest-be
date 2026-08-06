@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TopProduct } from '../../../domain/dashboard.repository';
+import { TopPurchasedProduct } from '../../../domain/dashboard.repository';
 
-export class TopProductResponseDto {
+export class TopPurchasedProductResponseDto {
   @ApiProperty({
     example: '2026-07',
     description: 'Mes de la métrica (YYYY-MM).',
@@ -20,16 +20,16 @@ export class TopProductResponseDto {
   @ApiProperty({
     type: 'integer',
     example: 120,
-    description: 'Unidades vendidas en el mes, sumando todas las ventas.',
+    description: 'Unidades compradas en el mes, sumando todas las compras.',
   })
-  unitsSold!: number;
+  unitsPurchased!: number;
 
-  static fromReadModel(m: TopProduct): TopProductResponseDto {
-    const dto = new TopProductResponseDto();
+  static fromReadModel(m: TopPurchasedProduct): TopPurchasedProductResponseDto {
+    const dto = new TopPurchasedProductResponseDto();
     dto.period = m.period;
     dto.productId = m.productId;
     dto.productName = m.productName;
-    dto.unitsSold = m.unitsSold;
+    dto.unitsPurchased = m.unitsPurchased;
     return dto;
   }
 }

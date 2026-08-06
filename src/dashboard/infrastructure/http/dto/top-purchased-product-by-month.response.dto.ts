@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MonthlyTopProduct } from '../../../domain/dashboard.repository';
+import { MonthlyTopPurchasedProduct } from '../../../domain/dashboard.repository';
 
-export class MonthlyTopProductPointDto {
+export class MonthlyTopPurchasedProductPointDto {
   @ApiProperty({
     type: 'integer',
     minimum: 1,
@@ -15,14 +15,14 @@ export class MonthlyTopProductPointDto {
     format: 'uuid',
     nullable: true,
     example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-    description: '`null` si el mes no tuvo ventas.',
+    description: '`null` si el mes no tuvo compras.',
   })
   productId!: string | null;
 
   @ApiProperty({
     nullable: true,
     example: 'Logitech MX Master 3S',
-    description: 'Nombre del producto lider. `null` si el mes no tuvo ventas.',
+    description: 'Nombre del producto lider. `null` si el mes no tuvo compras.',
   })
   productName!: string | null;
 
@@ -30,7 +30,7 @@ export class MonthlyTopProductPointDto {
     nullable: true,
     example: 'Mouse inalambrico ergonomico con sensor de 8000 DPI.',
     description:
-      'Descripcion del producto lider. `null` si el mes no tuvo ventas o si el ' +
+      'Descripcion del producto lider. `null` si el mes no tuvo compras o si el ' +
       'producto no tiene descripcion.',
   })
   productDescription!: string | null;
@@ -39,13 +39,13 @@ export class MonthlyTopProductPointDto {
     type: 'integer',
     example: 120,
     description:
-      'Unidades vendidas del producto lider; 0 si el mes no tuvo ventas.',
+      'Unidades compradas del producto lider; 0 si el mes no tuvo compras.',
   })
-  unitsSold!: number;
+  unitsPurchased!: number;
 }
 
-/** Serie anual: el producto mas vendido de cada mes. */
-export class TopProductByMonthResponseDto {
+/** Serie anual: el producto mas comprado de cada mes. */
+export class TopPurchasedProductByMonthResponseDto {
   @ApiProperty({
     type: 'integer',
     example: 2026,
@@ -54,25 +54,25 @@ export class TopProductByMonthResponseDto {
   year!: number;
 
   @ApiProperty({
-    type: [MonthlyTopProductPointDto],
+    type: [MonthlyTopPurchasedProductPointDto],
     description:
       'Siempre los 12 meses, en orden; los vacios van con producto null.',
   })
-  items!: MonthlyTopProductPointDto[];
+  items!: MonthlyTopPurchasedProductPointDto[];
 
   static build(
     year: number,
-    rows: MonthlyTopProduct[],
-  ): TopProductByMonthResponseDto {
-    const dto = new TopProductByMonthResponseDto();
+    rows: MonthlyTopPurchasedProduct[],
+  ): TopPurchasedProductByMonthResponseDto {
+    const dto = new TopPurchasedProductByMonthResponseDto();
     dto.year = year;
     dto.items = rows.map((r) => {
-      const p = new MonthlyTopProductPointDto();
+      const p = new MonthlyTopPurchasedProductPointDto();
       p.month = r.month;
       p.productId = r.productId;
       p.productName = r.productName;
       p.productDescription = r.productDescription;
-      p.unitsSold = r.unitsSold;
+      p.unitsPurchased = r.unitsPurchased;
       return p;
     });
     return dto;

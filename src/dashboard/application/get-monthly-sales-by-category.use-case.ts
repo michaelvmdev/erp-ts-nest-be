@@ -14,6 +14,9 @@ export class GetMonthlySalesByCategoryUseCase {
   ) {}
 
   execute(year: number, categoryId: string): Promise<MonthlyAmount[]> {
-    return this.dashboard.monthlySalesByCategory(YearPeriod.of(year), categoryId);
+    return this.dashboard.monthlySalesByCategory(
+      YearPeriod.of(year),
+      categoryId,
+    );
   }
 }
