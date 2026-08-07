@@ -24,12 +24,16 @@ import {
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateSaleUseCase } from '../../application/create-sale.use-case';
 import { FindSaleUseCase } from '../../application/find-sale.use-case';
+import { GenerateClientSalesAmountReportPdfUseCase } from '../../application/generate-client-sales-amount-report-pdf.use-case';
 import { GenerateProductSalesReportPdfUseCase } from '../../application/generate-product-sales-report-pdf.use-case';
 import { GenerateSalePdfUseCase } from '../../application/generate-sale-pdf.use-case';
+import { GenerateSalesByClientReportPdfUseCase } from '../../application/generate-sales-by-client-report-pdf.use-case';
 import { GenerateSalesReportPdfUseCase } from '../../application/generate-sales-report-pdf.use-case';
 import { SearchSalesUseCase } from '../../application/search-sales.use-case';
+import { SendClientSalesAmountReportPdfUseCase } from '../../application/send-client-sales-amount-report-pdf.use-case';
 import { SendProductSalesReportPdfUseCase } from '../../application/send-product-sales-report-pdf.use-case';
 import { SendSalePdfUseCase } from '../../application/send-sale-pdf.use-case';
+import { SendSalesByClientReportPdfUseCase } from '../../application/send-sales-by-client-report-pdf.use-case';
 import { SendSalesReportPdfUseCase } from '../../application/send-sales-report-pdf.use-case';
 import { UpdateSaleUseCase } from '../../application/update-sale.use-case';
 import { CreateSaleRequestDto } from './dto/create-sale.request.dto';
@@ -38,10 +42,18 @@ import {
   SaleResponseDto,
   SaleSummaryResponseDto,
 } from './dto/sale.response.dto';
+import { ClientSalesAmountReportPdfResponseDto } from './dto/client-sales-amount-report-pdf.response.dto';
+import { ClientSalesAmountReportQueryDto } from './dto/client-sales-amount-report.query.dto';
 import { ProductSalesReportPdfResponseDto } from './dto/product-sales-report-pdf.response.dto';
 import { ProductSalesReportQueryDto } from './dto/product-sales-report.query.dto';
+import { SalesByClientReportPdfResponseDto } from './dto/sales-by-client-report-pdf.response.dto';
+import { SalesByClientReportQueryDto } from './dto/sales-by-client-report.query.dto';
+import { SendClientSalesAmountReportEmailQueryDto } from './dto/send-client-sales-amount-report-email.query.dto';
+import { SendClientSalesAmountReportEmailResponseDto } from './dto/send-client-sales-amount-report-email.response.dto';
 import { SendProductSalesReportEmailQueryDto } from './dto/send-product-sales-report-email.query.dto';
 import { SendProductSalesReportEmailResponseDto } from './dto/send-product-sales-report-email.response.dto';
+import { SendSalesByClientReportEmailQueryDto } from './dto/send-sales-by-client-report-email.query.dto';
+import { SendSalesByClientReportEmailResponseDto } from './dto/send-sales-by-client-report-email.response.dto';
 import { SalePdfResponseDto } from './dto/sale-pdf.response.dto';
 import { SalesReportPdfResponseDto } from './dto/sales-report-pdf.response.dto';
 import { SalesReportQueryDto } from './dto/sales-report.query.dto';
@@ -65,9 +77,13 @@ export class SalesController {
     private readonly generateSalePdf: GenerateSalePdfUseCase,
     private readonly generateSalesReportPdf: GenerateSalesReportPdfUseCase,
     private readonly generateProductSalesReportPdf: GenerateProductSalesReportPdfUseCase,
+    private readonly generateClientSalesAmountReportPdf: GenerateClientSalesAmountReportPdfUseCase,
+    private readonly generateSalesByClientReportPdf: GenerateSalesByClientReportPdfUseCase,
     private readonly sendSalePdf: SendSalePdfUseCase,
     private readonly sendSalesReportPdf: SendSalesReportPdfUseCase,
     private readonly sendProductSalesReportPdf: SendProductSalesReportPdfUseCase,
+    private readonly sendClientSalesAmountReportPdf: SendClientSalesAmountReportPdfUseCase,
+    private readonly sendSalesByClientReportPdf: SendSalesByClientReportPdfUseCase,
   ) {}
 
   // La ruta sin parametro va antes que ':saleId' para que no se interprete como
@@ -268,6 +284,148 @@ export class SalesController {
       query.orderBy,
     );
     return SendProductSalesReportEmailResponseDto.fromOutput(output);
+  }
+
+  // --- Reporte de monto de venta de clientes (quienes nos compran) ---
+
+  @Get('clients-amount-report')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar el PDF del reporte de monto de venta por cliente',
+    description:
+      'Genera un reporte en PDF con el IGV y el monto vendidos a cada cliente que ' +
+      'nos compra en un rango de fechas. `from` es obligatorio; `to` opcional (si ' +
+      'se omite, es el reporte del dia `from`). Se arma en memoria; no se guarda.',
+  })
+  @ApiOkResponse({
+    description: 'PDF del reporte en base64.',
+    type: ClientSalesAmountReportPdfResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Alguna fecha esta mal formada o el rango esta invertido (`to` anterior a `from`).',
+    type: ApiErrorDto,
+  })
+  async clientsAmountReport(
+    @Query() query: ClientSalesAmountReportQueryDto,
+  ): Promise<ClientSalesAmountReportPdfResponseDto> {
+    const output = await this.generateClientSalesAmountReportPdf.execute(
+      query.from,
+      query.to,
+    );
+    return ClientSalesAmountReportPdfResponseDto.fromOutput(output);
+  }
+
+  @Post('clients-amount-report/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de monto de venta por cliente',
+    description:
+      'Genera el reporte de monto por cliente en PDF (en memoria) y lo adjunta a ' +
+      'un correo. El destinatario y las fechas viajan en la query string: ' +
+      '`email` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({
+    description: 'Correo despachado con el reporte en PDF adjunto.',
+    type: SendClientSalesAmountReportEmailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'El correo no es valido, alguna fecha esta mal formada o el rango esta invertido.',
+    type: ApiErrorDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'El correo no esta configurado (faltan las variables MAIL_*) o el servidor ' +
+      'SMTP no acepto el mensaje.',
+    type: ApiErrorDto,
+  })
+  async sendClientsAmountReportEmail(
+    @Query() query: SendClientSalesAmountReportEmailQueryDto,
+  ): Promise<SendClientSalesAmountReportEmailResponseDto> {
+    const output = await this.sendClientSalesAmountReportPdf.execute(
+      query.email,
+      query.from,
+      query.to,
+    );
+    return SendClientSalesAmountReportEmailResponseDto.fromOutput(output);
+  }
+
+  // --- Reporte de ventas por cliente (detalle, filtrable por cliente) ---
+
+  @Get('sales-by-client-report')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar el PDF del reporte de ventas por cliente',
+    description:
+      'Genera un reporte en PDF con el detalle de ventas (documento del cliente, ' +
+      'fecha, IGV y monto) en un rango de fechas, opcionalmente acotado a un ' +
+      'cliente. `from` es obligatorio; `to` opcional (si se omite, es el reporte ' +
+      'del dia `from`); `clientId` opcional. Se arma en memoria; no se guarda.',
+  })
+  @ApiOkResponse({
+    description: 'PDF del reporte en base64.',
+    type: SalesByClientReportPdfResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Alguna fecha esta mal formada, el rango esta invertido o `clientId` no es un UUID valido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Se indico un `clientId` que no existe.',
+    type: ApiErrorDto,
+  })
+  async salesByClientReport(
+    @Query() query: SalesByClientReportQueryDto,
+  ): Promise<SalesByClientReportPdfResponseDto> {
+    const output = await this.generateSalesByClientReportPdf.execute(
+      query.from,
+      query.to,
+      query.clientId,
+    );
+    return SalesByClientReportPdfResponseDto.fromOutput(output);
+  }
+
+  @Post('sales-by-client-report/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de ventas por cliente',
+    description:
+      'Genera el reporte de ventas por cliente en PDF (en memoria) y lo adjunta a ' +
+      'un correo. El destinatario, las fechas y el cliente viajan en la query ' +
+      'string: `email` y `from` son obligatorios; `to` y `clientId` opcionales.',
+  })
+  @ApiOkResponse({
+    description: 'Correo despachado con el reporte en PDF adjunto.',
+    type: SendSalesByClientReportEmailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'El correo no es valido, alguna fecha esta mal formada, el rango esta ' +
+      'invertido o `clientId` no es un UUID valido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Se indico un `clientId` que no existe.',
+    type: ApiErrorDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'El correo no esta configurado (faltan las variables MAIL_*) o el servidor ' +
+      'SMTP no acepto el mensaje.',
+    type: ApiErrorDto,
+  })
+  async sendSalesByClientReportEmail(
+    @Query() query: SendSalesByClientReportEmailQueryDto,
+  ): Promise<SendSalesByClientReportEmailResponseDto> {
+    const output = await this.sendSalesByClientReportPdf.execute(
+      query.email,
+      query.from,
+      query.to,
+      query.clientId,
+    );
+    return SendSalesByClientReportEmailResponseDto.fromOutput(output);
   }
 
   @Get(':saleId')
