@@ -1,4 +1,8 @@
-import { ConflictError, NotFoundError } from '../../shared/domain/domain.error';
+import {
+  ConflictError,
+  InvalidInputError,
+  NotFoundError,
+} from '../../shared/domain/domain.error';
 
 export class SaleNotFoundError extends NotFoundError {
   readonly code = 'SALE_NOT_FOUND';
@@ -84,5 +88,21 @@ export class SaleSeriesExhaustedError extends ConflictError {
 
   constructor(code: string) {
     super(`La serie ${code} agoto su correlativo de 10 digitos.`);
+  }
+}
+
+/**
+ * El rango del reporte esta invertido: la fecha final es anterior a la inicial.
+ *
+ * Es 400 y no 422: el dato en si es incoherente, no choca con el estado del
+ * sistema. Un rango de un solo dia (from == to) es valido: es el reporte diario.
+ */
+export class InvalidSalesReportRangeError extends InvalidInputError {
+  readonly code = 'SALES_REPORT_RANGE_INVALID';
+
+  constructor(dateFrom: string, dateTo: string) {
+    super(
+      `El rango del reporte es invalido: "to" (${dateTo}) es anterior a "from" (${dateFrom}).`,
+    );
   }
 }
