@@ -30,16 +30,16 @@ export class SendSalesByClientReportPdfUseCase {
 
   async execute(
     email: string,
+    clientId: string,
     dateFrom: string,
     dateTo?: string,
-    clientId?: string,
   ): Promise<SendSalesByClientReportOutput> {
     const to = dateTo ?? dateFrom;
     if (to < dateFrom) {
       throw new InvalidSalesReportRangeError(dateFrom, to);
     }
 
-    const view = await this.reader.byDateRange(dateFrom, to, clientId);
+    const view = await this.reader.byDateRange(clientId, dateFrom, to);
 
     const pdf = await this.renderer.render(view);
     const fileName = view.singleDay
@@ -49,16 +49,13 @@ export class SendSalesByClientReportPdfUseCase {
     const periodo = view.singleDay
       ? `del dia ${view.dateFrom}`
       : `entre las fechas ${view.dateFrom} y ${view.dateTo}`;
-    const alcance = view.clientDescription
-      ? ` del cliente ${view.clientDescription}`
-      : '';
 
     const result = await this.mailer.send({
       to: email,
-      subject: `Reporte de ventas por cliente ${periodo}`,
+      subject: `Reporte de ventas del cliente ${view.clientDescription} ${periodo}`,
       text:
         `Hola,\n\n` +
-        `Adjuntamos el reporte de ventas por cliente${alcance} ${periodo} en PDF.\n\n` +
+        `Adjuntamos el reporte de ventas del cliente ${view.clientDescription} ${periodo} en PDF.\n\n` +
         `Resumen: ${view.totals.count} venta${view.totals.count === 1 ? '' : 's'}, ` +
         `total S/ ${view.totals.amount}.\n\n` +
         'Michael Dev S.A.C.\nEnviado con AppSales',

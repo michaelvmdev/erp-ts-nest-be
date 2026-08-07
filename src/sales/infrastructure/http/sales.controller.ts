@@ -356,12 +356,12 @@ export class SalesController {
   @Get('sales-by-client-report')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Generar el PDF del reporte de ventas por cliente',
+    summary: 'Generar el PDF del reporte de ventas de un cliente',
     description:
-      'Genera un reporte en PDF con el detalle de ventas (documento del cliente, ' +
-      'fecha, IGV y monto) en un rango de fechas, opcionalmente acotado a un ' +
-      'cliente. `from` es obligatorio; `to` opcional (si se omite, es el reporte ' +
-      'del dia `from`); `clientId` opcional. Se arma en memoria; no se guarda.',
+      'Genera un reporte en PDF con el detalle de ventas de un cliente (documento, ' +
+      'fecha, IGV y monto) en un rango de fechas. `clientId` y `from` son ' +
+      'obligatorios; `to` opcional (si se omite, es el reporte del dia `from`). ' +
+      'Se arma en memoria; no se guarda.',
   })
   @ApiOkResponse({
     description: 'PDF del reporte en base64.',
@@ -369,20 +369,20 @@ export class SalesController {
   })
   @ApiBadRequestResponse({
     description:
-      'Alguna fecha esta mal formada, el rango esta invertido o `clientId` no es un UUID valido.',
+      '`clientId` no es un UUID valido, alguna fecha esta mal formada o el rango esta invertido.',
     type: ApiErrorDto,
   })
   @ApiNotFoundResponse({
-    description: 'Se indico un `clientId` que no existe.',
+    description: 'El `clientId` indicado no existe.',
     type: ApiErrorDto,
   })
   async salesByClientReport(
     @Query() query: SalesByClientReportQueryDto,
   ): Promise<SalesByClientReportPdfResponseDto> {
     const output = await this.generateSalesByClientReportPdf.execute(
+      query.clientId,
       query.from,
       query.to,
-      query.clientId,
     );
     return SalesByClientReportPdfResponseDto.fromOutput(output);
   }
@@ -390,11 +390,11 @@ export class SalesController {
   @Post('sales-by-client-report/send-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Enviar por correo el reporte de ventas por cliente',
+    summary: 'Enviar por correo el reporte de ventas de un cliente',
     description:
-      'Genera el reporte de ventas por cliente en PDF (en memoria) y lo adjunta a ' +
-      'un correo. El destinatario, las fechas y el cliente viajan en la query ' +
-      'string: `email` y `from` son obligatorios; `to` y `clientId` opcionales.',
+      'Genera el reporte de ventas de un cliente en PDF (en memoria) y lo adjunta ' +
+      'a un correo. El destinatario, el cliente y las fechas viajan en la query ' +
+      'string: `email`, `clientId` y `from` son obligatorios; `to` opcional.',
   })
   @ApiOkResponse({
     description: 'Correo despachado con el reporte en PDF adjunto.',
@@ -402,12 +402,12 @@ export class SalesController {
   })
   @ApiBadRequestResponse({
     description:
-      'El correo no es valido, alguna fecha esta mal formada, el rango esta ' +
-      'invertido o `clientId` no es un UUID valido.',
+      'El correo o el `clientId` no son validos, alguna fecha esta mal formada o ' +
+      'el rango esta invertido.',
     type: ApiErrorDto,
   })
   @ApiNotFoundResponse({
-    description: 'Se indico un `clientId` que no existe.',
+    description: 'El `clientId` indicado no existe.',
     type: ApiErrorDto,
   })
   @ApiServiceUnavailableResponse({
@@ -421,9 +421,9 @@ export class SalesController {
   ): Promise<SendSalesByClientReportEmailResponseDto> {
     const output = await this.sendSalesByClientReportPdf.execute(
       query.email,
+      query.clientId,
       query.from,
       query.to,
-      query.clientId,
     );
     return SendSalesByClientReportEmailResponseDto.fromOutput(output);
   }

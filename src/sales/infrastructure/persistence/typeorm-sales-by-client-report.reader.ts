@@ -11,10 +11,10 @@ import {
 /**
  * Lado de lectura del reporte de ventas por cliente: SQL directo.
  *
- * Una fila por venta en el rango, con el documento del cliente ya resuelto. El
- * filtro opcional por cliente se agrega como parametro adicional, nunca por
- * concatenacion. Se ordena por cliente y luego por fecha para agrupar visualmente
- * las ventas de cada uno. Si se pide un cliente que no existe, se responde 404.
+ * El reporte es siempre sobre un cliente concreto: primero se resuelve su nombre
+ * (y se responde 404 si no existe) y luego se listan sus ventas del rango, una
+ * fila por venta, ordenadas por fecha. El rango es inclusivo en ambos extremos y
+ * todo viaja parametrizado.
  */
 @Injectable()
 export class TypeOrmSalesByClientReportReader implements SalesByClientReportReader {
@@ -24,31 +24,20 @@ export class TypeOrmSalesByClientReportReader implements SalesByClientReportRead
   ) {}
 
   async byDateRange(
+    clientId: string,
     dateFrom: string,
     dateTo: string,
-    clientId?: string,
   ): Promise<SalesByClientReportView> {
-    let clientDescription: string | null = null;
-    if (clientId) {
-      const cliente: Array<{ description: string }> =
-        await this.dataSource.query(
-          `SELECT client_description AS description
-             FROM clients
-            WHERE client_id = $1`,
-          [clientId],
-        );
-      if (cliente.length === 0) {
-        throw new SaleClientNotFoundError(clientId);
-      }
-      clientDescription = cliente[0].description;
+    const cliente: Array<{ description: string }> = await this.dataSource.query(
+      `SELECT client_description AS description
+         FROM clients
+        WHERE client_id = $1`,
+      [clientId],
+    );
+    if (cliente.length === 0) {
+      throw new SaleClientNotFoundError(clientId);
     }
-
-    const params: unknown[] = [dateFrom, dateTo];
-    let filtroCliente = '';
-    if (clientId) {
-      params.push(clientId);
-      filtroCliente = `AND s.client_id = $${params.length}`;
-    }
+    const clientDescription = cliente[0].description;
 
     const filas: SalesByClientRow[] = await this.dataSource.query(
       `SELECT dt.document_type_description       AS "documentType",
@@ -60,10 +49,10 @@ export class TypeOrmSalesByClientReportReader implements SalesByClientReportRead
          FROM sales s
          JOIN clients c        ON c.client_id = s.client_id
          JOIN document_types dt ON dt.document_type_id = c.document_type_id
-        WHERE s.sale_date >= $1 AND s.sale_date <= $2
-          ${filtroCliente}
-        ORDER BY c.client_description ASC, s.sale_date ASC, s.sale_number ASC`,
-      params,
+        WHERE s.client_id = $1
+          AND s.sale_date >= $2 AND s.sale_date <= $3
+        ORDER BY s.sale_date ASC, s.sale_number ASC`,
+      [clientId, dateFrom, dateTo],
     );
 
     let igvCents = 0;
@@ -77,7 +66,7 @@ export class TypeOrmSalesByClientReportReader implements SalesByClientReportRead
       dateFrom,
       dateTo,
       singleDay: dateFrom === dateTo,
-      clientId: clientId ?? null,
+      clientId,
       clientDescription,
       rows: filas,
       totals: {

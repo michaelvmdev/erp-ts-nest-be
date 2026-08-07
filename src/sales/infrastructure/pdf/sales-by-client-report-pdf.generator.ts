@@ -125,14 +125,9 @@ export class SalesByClientReportPdfGenerator implements SalesByClientReportPdfRe
       .fillColor(COLOR.soft)
       .font('Helvetica')
       .fontSize(9)
-      .text(
-        v.clientDescription
-          ? `Cliente: ${v.clientDescription}`
-          : 'Todos los clientes que nos compran en el periodo.',
-        MARGIN,
-        156,
-        { width: RIGHT - MARGIN },
-      );
+      .text(`Cliente: ${v.clientDescription}`, MARGIN, 156, {
+        width: RIGHT - MARGIN,
+      });
   }
 
   private cabeceraTabla(doc: PDFKit.PDFDocument, y: number): number {
@@ -162,14 +157,11 @@ export class SalesByClientReportPdfGenerator implements SalesByClientReportPdfRe
     const limiteInferior = doc.page.height - MARGIN - 40;
 
     if (v.rows.length === 0) {
-      const mensaje = v.clientDescription
-        ? 'Sin ventas del cliente en el periodo.'
-        : 'Sin ventas en el periodo.';
       doc
         .fillColor(COLOR.soft)
         .font('Helvetica-Oblique')
         .fontSize(9)
-        .text(mensaje, MARGIN, y + 8, {
+        .text('Sin ventas del cliente en el periodo.', MARGIN, y + 8, {
           width: RIGHT - MARGIN,
           align: 'center',
         });

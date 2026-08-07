@@ -10,9 +10,10 @@ import {
 /**
  * Parametros de `POST /sales/sales-by-client-report/send-email`.
  *
- * El correo, las fechas y el cliente viajan en la query string. `email` y `from`
- * son obligatorios; `to` opcional (si se omite, es el reporte del dia `from`);
- * `clientId` opcional acota a un unico cliente.
+ * El reporte es siempre sobre un cliente concreto, asi que `clientId` es
+ * obligatorio. El correo, el cliente y las fechas viajan en la query string:
+ * `email`, `clientId` y `from` son obligatorios; `to` opcional (si se omite, es
+ * el reporte del dia `from`).
  */
 export class SendSalesByClientReportEmailQueryDto {
   @ApiProperty({
@@ -23,6 +24,14 @@ export class SendSalesByClientReportEmailQueryDto {
   @IsEmail({}, { message: 'email debe ser una direccion de correo valida.' })
   @MaxLength(254, { message: 'email no puede superar 254 caracteres.' })
   email!: string;
+
+  @ApiProperty({
+    format: 'uuid',
+    example: '5b8f3c21-9d4e-4a7b-8c16-2f9e1d3a5b7c',
+    description: 'Cliente del que se listan las ventas.',
+  })
+  @IsUUID('4', { message: 'clientId debe ser un UUID valido.' })
+  clientId!: string;
 
   @ApiProperty({
     format: 'date',
@@ -46,14 +55,4 @@ export class SendSalesByClientReportEmailQueryDto {
     message: 'to debe tener el formato YYYY-MM-DD.',
   })
   to?: string;
-
-  @ApiPropertyOptional({
-    format: 'uuid',
-    example: '5b8f3c21-9d4e-4a7b-8c16-2f9e1d3a5b7c',
-    description:
-      'Si se indica, el reporte incluye solo las ventas de ese cliente.',
-  })
-  @IsOptional()
-  @IsUUID('4', { message: 'clientId debe ser un UUID valido.' })
-  clientId?: string;
 }

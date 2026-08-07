@@ -1,10 +1,10 @@
 /**
  * Vista de lectura del reporte "Ventas por Cliente".
  *
- * Es un detalle: una fila por venta, con el documento del cliente, la fecha, el
- * IGV y el monto. Muestra quienes nos compran y cuanto. Se puede filtrar por
- * rango de fechas y, opcionalmente, por un cliente. Los importes viajan como
- * cadena decimal.
+ * Es el detalle de ventas de UN cliente concreto: una fila por venta, con el
+ * documento del cliente, la fecha, el IGV y el monto. Se filtra por el cliente
+ * (obligatorio) y por un rango de fechas. Los importes viajan como cadena
+ * decimal.
  */
 
 export interface SalesByClientRow {
@@ -20,7 +20,7 @@ export interface SalesByClientRow {
 }
 
 export interface SalesByClientTotals {
-  /** Ventas incluidas en el reporte. */
+  /** Ventas del cliente incluidas en el reporte. */
   count: number;
   igv: string;
   amount: string;
@@ -30,20 +30,23 @@ export interface SalesByClientReportView {
   dateFrom: string;
   dateTo: string;
   singleDay: boolean;
-  /** Cliente por el que se filtro, o null si se incluyen todos. */
-  clientId: string | null;
-  /** Nombre del cliente filtrado, para el subtitulo; null si no se filtro. */
-  clientDescription: string | null;
+  /** Cliente del que se listan las ventas. */
+  clientId: string;
+  /** Nombre del cliente, para el subtitulo. */
+  clientDescription: string;
   rows: SalesByClientRow[];
   totals: SalesByClientTotals;
 }
 
-/** Puerto de lectura: arma el detalle de ventas por cliente de un rango. */
+/**
+ * Puerto de lectura: arma el detalle de ventas de un cliente en un rango.
+ * `clientId` es obligatorio: el reporte es siempre sobre un cliente concreto.
+ */
 export interface SalesByClientReportReader {
   byDateRange(
+    clientId: string,
     dateFrom: string,
     dateTo: string,
-    clientId?: string,
   ): Promise<SalesByClientReportView>;
 }
 

@@ -24,16 +24,16 @@ export class GenerateSalesByClientReportPdfUseCase {
   ) {}
 
   async execute(
+    clientId: string,
     dateFrom: string,
     dateTo?: string,
-    clientId?: string,
   ): Promise<SalesByClientReportPdfOutput> {
     const to = dateTo ?? dateFrom;
     if (to < dateFrom) {
       throw new InvalidSalesReportRangeError(dateFrom, to);
     }
 
-    const view = await this.reader.byDateRange(dateFrom, to, clientId);
+    const view = await this.reader.byDateRange(clientId, dateFrom, to);
     const pdf = await this.renderer.render(view);
 
     const fileName = view.singleDay
