@@ -1,4 +1,8 @@
-import { ConflictError, NotFoundError } from '../../shared/domain/domain.error';
+import {
+  ConflictError,
+  InvalidInputError,
+  NotFoundError,
+} from '../../shared/domain/domain.error';
 
 export class PurchaseNotFoundError extends NotFoundError {
   readonly code = 'PURCHASE_NOT_FOUND';
@@ -45,6 +49,22 @@ export class InactivePurchaseSupplierError extends ConflictError {
   constructor(supplierId: string) {
     super(
       `El proveedor ${supplierId} esta inactivo y no admite compras nuevas.`,
+    );
+  }
+}
+
+/**
+ * El rango del reporte de compras esta invertido.
+ *
+ * Es 400: el dato es incoherente en si mismo, no choca con el estado del
+ * sistema. Un rango de un solo dia (from == to) es valido.
+ */
+export class InvalidPurchasesReportRangeError extends InvalidInputError {
+  readonly code = 'PURCHASES_REPORT_RANGE_INVALID';
+
+  constructor(dateFrom: string, dateTo: string) {
+    super(
+      `El rango del reporte es invalido: "to" (${dateTo}) es anterior a "from" (${dateFrom}).`,
     );
   }
 }

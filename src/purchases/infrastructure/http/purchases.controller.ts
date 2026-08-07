@@ -18,20 +18,33 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreatePurchaseUseCase } from '../../application/create-purchase.use-case';
 import { FindPurchaseUseCase } from '../../application/find-purchase.use-case';
+import { GeneratePurchasesBySupplierReportPdfUseCase } from '../../application/generate-purchases-by-supplier-report-pdf.use-case';
+import { GenerateSupplierPurchasesAmountReportPdfUseCase } from '../../application/generate-supplier-purchases-amount-report-pdf.use-case';
 import { SearchPurchasesUseCase } from '../../application/search-purchases.use-case';
+import { SendPurchasesBySupplierReportPdfUseCase } from '../../application/send-purchases-by-supplier-report-pdf.use-case';
+import { SendSupplierPurchasesAmountReportPdfUseCase } from '../../application/send-supplier-purchases-amount-report-pdf.use-case';
 import { UpdatePurchaseUseCase } from '../../application/update-purchase.use-case';
 import { CreatePurchaseRequestDto } from './dto/create-purchase.request.dto';
+import { PurchasesBySupplierReportPdfResponseDto } from './dto/purchases-by-supplier-report-pdf.response.dto';
+import { PurchasesBySupplierReportQueryDto } from './dto/purchases-by-supplier-report.query.dto';
 import {
   PaginatedPurchasesResponseDto,
   PurchaseResponseDto,
   PurchaseSummaryResponseDto,
 } from './dto/purchase.response.dto';
 import { SearchPurchasesQueryDto } from './dto/search-purchases.query.dto';
+import { SendPurchasesBySupplierReportEmailQueryDto } from './dto/send-purchases-by-supplier-report-email.query.dto';
+import { SendPurchasesBySupplierReportEmailResponseDto } from './dto/send-purchases-by-supplier-report-email.response.dto';
+import { SendSuppliersAmountReportEmailQueryDto } from './dto/send-suppliers-amount-report-email.query.dto';
+import { SendSuppliersAmountReportEmailResponseDto } from './dto/send-suppliers-amount-report-email.response.dto';
+import { SuppliersAmountReportPdfResponseDto } from './dto/suppliers-amount-report-pdf.response.dto';
+import { SuppliersAmountReportQueryDto } from './dto/suppliers-amount-report.query.dto';
 import { UpdatePurchaseRequestDto } from './dto/update-purchase.request.dto';
 
 const UUID_EJEMPLO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
@@ -44,7 +57,153 @@ export class PurchasesController {
     private readonly searchPurchases: SearchPurchasesUseCase,
     private readonly createPurchase: CreatePurchaseUseCase,
     private readonly updatePurchase: UpdatePurchaseUseCase,
+    private readonly generateSuppliersAmountReportPdf: GenerateSupplierPurchasesAmountReportPdfUseCase,
+    private readonly generatePurchasesBySupplierReportPdf: GeneratePurchasesBySupplierReportPdfUseCase,
+    private readonly sendSuppliersAmountReportPdf: SendSupplierPurchasesAmountReportPdfUseCase,
+    private readonly sendPurchasesBySupplierReportPdf: SendPurchasesBySupplierReportPdfUseCase,
   ) {}
+
+  // --- Reporte de monto de compras por proveedor ---
+
+  @Get('suppliers-amount-report')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar el PDF del reporte de monto de compra por proveedor',
+    description:
+      'Genera un reporte en PDF con el IGV y el monto comprado a cada proveedor ' +
+      'en un rango de fechas. `from` es obligatorio; `to` opcional (si se omite, ' +
+      'es el reporte del dia `from`). Se arma en memoria; no se guarda.',
+  })
+  @ApiOkResponse({
+    description: 'PDF del reporte en base64.',
+    type: SuppliersAmountReportPdfResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Alguna fecha esta mal formada o el rango esta invertido (`to` anterior a `from`).',
+    type: ApiErrorDto,
+  })
+  async suppliersAmountReport(
+    @Query() query: SuppliersAmountReportQueryDto,
+  ): Promise<SuppliersAmountReportPdfResponseDto> {
+    const output = await this.generateSuppliersAmountReportPdf.execute(
+      query.from,
+      query.to,
+    );
+    return SuppliersAmountReportPdfResponseDto.fromOutput(output);
+  }
+
+  @Post('suppliers-amount-report/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de monto de compra por proveedor',
+    description:
+      'Genera el reporte de monto por proveedor en PDF (en memoria) y lo adjunta ' +
+      'a un correo. El destinatario y las fechas viajan en la query string: ' +
+      '`email` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({
+    description: 'Correo despachado con el reporte en PDF adjunto.',
+    type: SendSuppliersAmountReportEmailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'El correo no es valido, alguna fecha esta mal formada o el rango esta invertido.',
+    type: ApiErrorDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'El correo no esta configurado (faltan las variables MAIL_*) o el servidor ' +
+      'SMTP no acepto el mensaje.',
+    type: ApiErrorDto,
+  })
+  async sendSuppliersAmountReportEmail(
+    @Query() query: SendSuppliersAmountReportEmailQueryDto,
+  ): Promise<SendSuppliersAmountReportEmailResponseDto> {
+    const output = await this.sendSuppliersAmountReportPdf.execute(
+      query.email,
+      query.from,
+      query.to,
+    );
+    return SendSuppliersAmountReportEmailResponseDto.fromOutput(output);
+  }
+
+  // --- Reporte de compras por proveedor (detalle de un proveedor concreto) ---
+
+  @Get('purchases-by-supplier-report')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar el PDF del reporte de compras de un proveedor',
+    description:
+      'Genera un reporte en PDF con el detalle de compras de un proveedor (RUC, ' +
+      'fecha, IGV y monto) en un rango de fechas. `supplierId` y `from` son ' +
+      'obligatorios; `to` opcional (si se omite, es el reporte del dia `from`). ' +
+      'Se arma en memoria; no se guarda.',
+  })
+  @ApiOkResponse({
+    description: 'PDF del reporte en base64.',
+    type: PurchasesBySupplierReportPdfResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      '`supplierId` no es un UUID valido, alguna fecha esta mal formada o el rango esta invertido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'El `supplierId` indicado no existe.',
+    type: ApiErrorDto,
+  })
+  async purchasesBySupplierReport(
+    @Query() query: PurchasesBySupplierReportQueryDto,
+  ): Promise<PurchasesBySupplierReportPdfResponseDto> {
+    const output = await this.generatePurchasesBySupplierReportPdf.execute(
+      query.supplierId,
+      query.from,
+      query.to,
+    );
+    return PurchasesBySupplierReportPdfResponseDto.fromOutput(output);
+  }
+
+  @Post('purchases-by-supplier-report/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de compras de un proveedor',
+    description:
+      'Genera el reporte de compras de un proveedor en PDF (en memoria) y lo ' +
+      'adjunta a un correo. El destinatario, el proveedor y las fechas viajan en ' +
+      'la query string: `email`, `supplierId` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({
+    description: 'Correo despachado con el reporte en PDF adjunto.',
+    type: SendPurchasesBySupplierReportEmailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'El correo no es valido, `supplierId` no es un UUID, alguna fecha esta mal ' +
+      'formada o el rango esta invertido.',
+    type: ApiErrorDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'El `supplierId` indicado no existe.',
+    type: ApiErrorDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'El correo no esta configurado (faltan las variables MAIL_*) o el servidor ' +
+      'SMTP no acepto el mensaje.',
+    type: ApiErrorDto,
+  })
+  async sendPurchasesBySupplierReportEmail(
+    @Query() query: SendPurchasesBySupplierReportEmailQueryDto,
+  ): Promise<SendPurchasesBySupplierReportEmailResponseDto> {
+    const output = await this.sendPurchasesBySupplierReportPdf.execute(
+      query.email,
+      query.supplierId,
+      query.from,
+      query.to,
+    );
+    return SendPurchasesBySupplierReportEmailResponseDto.fromOutput(output);
+  }
 
   // La ruta sin parametro va antes que ':purchaseId' para que no se interprete
   // como un identificador.
