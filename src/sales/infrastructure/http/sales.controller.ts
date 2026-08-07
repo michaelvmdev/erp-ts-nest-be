@@ -24,9 +24,11 @@ import {
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateSaleUseCase } from '../../application/create-sale.use-case';
 import { FindSaleUseCase } from '../../application/find-sale.use-case';
+import { GenerateProductSalesReportPdfUseCase } from '../../application/generate-product-sales-report-pdf.use-case';
 import { GenerateSalePdfUseCase } from '../../application/generate-sale-pdf.use-case';
 import { GenerateSalesReportPdfUseCase } from '../../application/generate-sales-report-pdf.use-case';
 import { SearchSalesUseCase } from '../../application/search-sales.use-case';
+import { SendProductSalesReportPdfUseCase } from '../../application/send-product-sales-report-pdf.use-case';
 import { SendSalePdfUseCase } from '../../application/send-sale-pdf.use-case';
 import { SendSalesReportPdfUseCase } from '../../application/send-sales-report-pdf.use-case';
 import { UpdateSaleUseCase } from '../../application/update-sale.use-case';
@@ -36,6 +38,10 @@ import {
   SaleResponseDto,
   SaleSummaryResponseDto,
 } from './dto/sale.response.dto';
+import { ProductSalesReportPdfResponseDto } from './dto/product-sales-report-pdf.response.dto';
+import { ProductSalesReportQueryDto } from './dto/product-sales-report.query.dto';
+import { SendProductSalesReportEmailQueryDto } from './dto/send-product-sales-report-email.query.dto';
+import { SendProductSalesReportEmailResponseDto } from './dto/send-product-sales-report-email.response.dto';
 import { SalePdfResponseDto } from './dto/sale-pdf.response.dto';
 import { SalesReportPdfResponseDto } from './dto/sales-report-pdf.response.dto';
 import { SalesReportQueryDto } from './dto/sales-report.query.dto';
@@ -58,8 +64,10 @@ export class SalesController {
     private readonly updateSale: UpdateSaleUseCase,
     private readonly generateSalePdf: GenerateSalePdfUseCase,
     private readonly generateSalesReportPdf: GenerateSalesReportPdfUseCase,
+    private readonly generateProductSalesReportPdf: GenerateProductSalesReportPdfUseCase,
     private readonly sendSalePdf: SendSalePdfUseCase,
     private readonly sendSalesReportPdf: SendSalesReportPdfUseCase,
+    private readonly sendProductSalesReportPdf: SendProductSalesReportPdfUseCase,
   ) {}
 
   // La ruta sin parametro va antes que ':saleId' para que no se interprete como
@@ -185,6 +193,81 @@ export class SalesController {
       query.to,
     );
     return SendSalesReportEmailResponseDto.fromOutput(output);
+  }
+
+  // Ruta estatica de dos segmentos: no colisiona con ':saleId'.
+  @Get('products-report')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar el PDF de un reporte de productos vendidos por fechas',
+    description:
+      'Genera un reporte en PDF de los productos vendidos en un rango de fechas y ' +
+      'lo devuelve en base64. `from` es obligatorio; `to` opcional (si se omite, ' +
+      'es el reporte del dia `from`). `orderBy` ordena por monto (`amount`, por ' +
+      'defecto) o por cantidad (`quantity`), de mayor a menor. Cada fila trae el ' +
+      'producto, la cantidad vendida, el IGV y el total; cierra con los totales. ' +
+      'Se arma en memoria; no se guarda en el servidor.',
+  })
+  @ApiOkResponse({
+    description: 'PDF del reporte en base64.',
+    type: ProductSalesReportPdfResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Alguna fecha esta mal formada, el rango esta invertido (`to` anterior a ' +
+      '`from`) o `orderBy` no es "amount" ni "quantity".',
+    type: ApiErrorDto,
+  })
+  async productsReport(
+    @Query() query: ProductSalesReportQueryDto,
+  ): Promise<ProductSalesReportPdfResponseDto> {
+    const output = await this.generateProductSalesReportPdf.execute(
+      query.from,
+      query.to,
+      query.orderBy,
+    );
+    return ProductSalesReportPdfResponseDto.fromOutput(output);
+  }
+
+  // Ruta estatica de dos segmentos: no colisiona con ':saleId'.
+  @Post('products-report/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de productos vendidos por fechas',
+    description:
+      'Genera el reporte en PDF de los productos vendidos en un rango de fechas ' +
+      '(en memoria, sin guardarlo en disco) y lo adjunta a un correo. El ' +
+      'destinatario, las fechas y el orden viajan en la query string: `email` y ' +
+      '`from` son obligatorios; `to` opcional (si se omite, es el reporte del dia ' +
+      '`from`); `orderBy` por monto (`amount`, por defecto) o por cantidad ' +
+      '(`quantity`).',
+  })
+  @ApiOkResponse({
+    description: 'Correo despachado con el reporte en PDF adjunto.',
+    type: SendProductSalesReportEmailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'El correo no es valido, alguna fecha esta mal formada, el rango esta ' +
+      'invertido (`to` anterior a `from`) o `orderBy` no es "amount" ni "quantity".',
+    type: ApiErrorDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'El correo no esta configurado (faltan las variables MAIL_*) o el servidor ' +
+      'SMTP no acepto el mensaje.',
+    type: ApiErrorDto,
+  })
+  async sendProductsReportEmail(
+    @Query() query: SendProductSalesReportEmailQueryDto,
+  ): Promise<SendProductSalesReportEmailResponseDto> {
+    const output = await this.sendProductSalesReportPdf.execute(
+      query.email,
+      query.from,
+      query.to,
+      query.orderBy,
+    );
+    return SendProductSalesReportEmailResponseDto.fromOutput(output);
   }
 
   @Get(':saleId')

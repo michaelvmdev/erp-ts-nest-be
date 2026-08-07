@@ -7,8 +7,16 @@ import {
 } from '@nestjs/swagger';
 
 import type { Request, Response } from 'express';
+import {
+  BRAND_FAVICON_ICO,
+  BRAND_LOGO_PNG,
+} from './shared/infrastructure/assets';
 import { ApiErrorDto } from './shared/infrastructure/http/api-error.dto';
 import { ejemploDeError } from './shared/infrastructure/http/error-examples';
+
+/** URLs publicas de los estaticos de marca, servidos en /assets (ver main.ts). */
+const FAVICON_URL = `/assets/${BRAND_FAVICON_ICO}`;
+const LOGO_URL = `/assets/${BRAND_LOGO_PNG}`;
 
 /** Ruta donde se monta la UI de Swagger. El JSON queda en `${SWAGGER_PATH}-json`. */
 export const SWAGGER_PATH = 'docs';
@@ -211,6 +219,9 @@ export function setupSwagger(app: INestApplication): void {
 
   SwaggerModule.setup(SWAGGER_PATH, app, documentFactory, {
     customSiteTitle: 'AppSales API — docs',
+    customfavIcon: FAVICON_URL,
+    // Reemplaza el logo de Swagger en la barra superior por el de la marca.
+    customCss: `.swagger-ui .topbar-wrapper img { content: url('${LOGO_URL}'); height: 40px; width: auto; }`,
     swaggerOptions: {
       // Conserva el token entre recargas de la pagina.
       persistAuthorization: true,
@@ -241,6 +252,7 @@ function paginaScalar(): string {
     <title>AppSales API — reference</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="${FAVICON_URL}" />
     <style>body { margin: 0; }</style>
   </head>
   <body>

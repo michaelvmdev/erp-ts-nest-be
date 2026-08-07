@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
+import { brandLogoPng } from '../../../shared/infrastructure/assets';
 import { SalePdfRenderer, SalePrintView } from '../../domain/sale-print-view';
 
 /** Paleta y medidas del comprobante, en un solo lugar. */
@@ -58,18 +59,27 @@ export class SalePdfGenerator implements SalePdfRenderer {
   }
 
   private encabezado(doc: PDFKit.PDFDocument, v: SalePrintView): void {
-    // Emisor a la izquierda: la empresa que emite el comprobante.
+    // Logo de la marca a la izquierda si esta disponible; el emisor se corre a
+    // su derecha. Si el logo falta, el texto ocupa el margen como antes.
+    const logo = brandLogoPng();
+    let textoX = MARGIN;
+    if (logo) {
+      doc.image(logo, MARGIN, MARGIN - 2, { width: 46 });
+      textoX = MARGIN + 58;
+    }
+
+    // Emisor: la empresa que emite el comprobante.
     doc
       .fillColor(COLOR.accent)
       .font('Helvetica-Bold')
       .fontSize(20)
-      .text('Michael Dev S.A.C.', MARGIN, MARGIN);
+      .text('Michael Dev S.A.C.', textoX, MARGIN);
     doc
       .fillColor(COLOR.soft)
       .font('Helvetica')
       .fontSize(9)
-      .text('Tienda de tecnologia', MARGIN, MARGIN + 24)
-      .text('RUC 20601054702', MARGIN, MARGIN + 36);
+      .text('Tienda de tecnologia', textoX, MARGIN + 24)
+      .text('RUC 20601054702', textoX, MARGIN + 36);
 
     // Recuadro del comprobante a la derecha.
     const bx = 360;

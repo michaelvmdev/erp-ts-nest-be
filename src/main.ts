@@ -3,10 +3,11 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express, { type Request, type Response } from 'express';
 import { AppModule } from './app.module';
+import { ASSETS_DIR } from './shared/infrastructure/assets';
 import { DomainExceptionFilter } from './shared/infrastructure/http/domain-exception.filter';
 import { isSwaggerEnabled, setupScalar, setupSwagger } from './swagger';
 
-async function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>) {
+function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>) {
   app.useGlobalPipes(
     new ValidationPipe({
       // Descarta las propiedades que no estan declaradas en el DTO.
@@ -27,6 +28,14 @@ async function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>)
   // Un unico filtro traduce todo error a la forma de ApiErrorDto.
   app.useGlobalFilters(new DomainExceptionFilter());
 
+  // Estaticos de marca (logo, favicon) bajo /assets. Se montan como middleware
+  // de Express antes del router de Nest, asi que no pasan por el ValidationPipe
+  // ni por el rate-limiting: son archivos publicos y cacheables.
+  app.use(
+    '/assets',
+    express.static(ASSETS_DIR, { maxAge: '1d', fallthrough: false }),
+  );
+
   if (isSwaggerEnabled()) {
     setupSwagger(app);
     // Scalar reutiliza el JSON que publica Swagger, asi que va despues.
@@ -36,7 +45,7 @@ async function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>)
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await configureApp(app);
+  configureApp(app);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
@@ -50,7 +59,7 @@ async function createServer() {
 
   const server = express();
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
-  await configureApp(app);
+  configureApp(app);
   await app.init();
   cachedServer = server;
   return server;
@@ -58,7 +67,7 @@ async function createServer() {
 
 export default async function handler(req: Request, res: Response) {
   const server = await createServer();
-  return server(req, res);
+  server(req, res);
 }
 
 if (require.main === module) {
