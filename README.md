@@ -1,4 +1,4 @@
-# crud-ts-nest-be
+# erp-ts-nest-be
 
 API de ventas construida con NestJS 11, TypeScript y PostgreSQL, siguiendo
 arquitectura hexagonal y diseño guiado por el dominio.

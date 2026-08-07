@@ -265,4 +265,4 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
   aunque el resto de la API funcione sin ella. Un self-host del bundle
   eliminaría esa dependencia.
 
-[Sin publicar]: https://github.com/michaelvargas7/crud-ts-nest-be
+[Sin publicar]: https://github.com/michaelvargas7/erp-ts-nest-be
