@@ -18,6 +18,7 @@ import { SaleTypesModule } from './sale-types/sale-types.module';
 import { SalesModule } from './sales/sales.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { UbigeoModule } from './ubigeo/ubigeo.module';
+import { UnitsModule } from './units/units.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UbigeoModule } from './ubigeo/ubigeo.module';
     DocumentTypesModule,
     ClientsModule,
     BrandsModule,
+    UnitsModule,
     CategoriesModule,
     ProductsModule,
     PurchasesModule,
