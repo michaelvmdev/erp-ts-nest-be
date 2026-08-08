@@ -282,6 +282,37 @@ Ambos endpoints reutilizan la misma consulta de lectura (`SalePrintView`), que
 resuelve los nombres que el PDF necesita —cliente, tipo de comprobante, ubigeo,
 producto— y que el agregado `Sale` no tiene: solo guarda identificadores.
 
+#### Reportes en PDF
+
+Cuatro reportes adicionales, cada uno con su variante de envío por correo. Todos
+se generan con pdfkit, enteramente en memoria, sin escribir a disco. El parámetro
+`to` es opcional: si se omite, el reporte es del día `from` ("del día"); si se
+indica, es "entre las fechas".
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/sales/report?from=YYYY-MM-DD&to=YYYY-MM-DD` | Ventas del periodo: una fila por venta con tipo, fecha, cliente y totales |
+| `POST` | `/sales/report/send-email?email=...&from=...&to=...` | Genera el reporte y lo envía por correo adjunto |
+| `GET` | `/sales/products-report?from=...&to=...&orderBy=amount\|quantity` | Productos vendidos del periodo, ordenados por monto o por cantidad |
+| `POST` | `/sales/products-report/send-email?email=...&from=...&to=...&orderBy=...` | Envía el reporte de productos por correo |
+| `GET` | `/sales/clients-amount-report?from=...&to=...` | IGV y monto vendido a cada cliente que compra en el periodo |
+| `POST` | `/sales/clients-amount-report/send-email?email=...&from=...&to=...` | Envía el reporte de clientes por correo |
+| `GET` | `/sales/sales-by-client-report?clientId=UUID&from=...&to=...` | Detalle de ventas de un cliente concreto |
+| `POST` | `/sales/sales-by-client-report/send-email?email=...&clientId=UUID&from=...&to=...` | Envía el detalle por correo |
+
+`clients-amount-report` usa INNER JOIN: solo aparecen los clientes con al menos
+una venta en el periodo, ordenados por monto descendente. Columnas: `#`, `Cliente`,
+`IGV`, `Monto`.
+
+`sales-by-client-report` requiere `clientId` obligatorio (404 si no existe) y lista
+una fila por venta, ordenadas por fecha. Columnas: `#`, `Tipo`, `Nro Doc`, `Cliente`,
+`Fecha`, `IGV`, `Monto`.
+
+La respuesta de todos los `GET` es `{ fileName, mimeType, base64 }`. Las variantes
+`send-email` responden `{ to, messageId, sentAt }` y necesitan las variables `MAIL_*`
+configuradas; si faltan o el servidor SMTP rechaza el mensaje, responden 503
+`SERVICE_UNAVAILABLE`. Si `to` < `from`, responden 400 `SALES_REPORT_RANGE_INVALID`.
+
 ### Clientes
 
 | Método | Ruta | Descripción |
@@ -329,6 +360,70 @@ En `PATCH`, el documento se rearma completo aunque venga una sola de sus partes.
 Enviar solo `documentTypeId` para pasar de DNI a RUC falla con 400, y está bien
 que así sea: el número vigente de 8 dígitos no es un RUC válido. Hay que enviar
 ambos.
+
+### Proveedores
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/suppliers` | Listado paginado con filtros |
+| `GET` | `/suppliers/{supplierId}` | Consulta un proveedor |
+| `POST` | `/suppliers` | Alta |
+| `PATCH` | `/suppliers/{supplierId}` | Modificación parcial y desactivación |
+| `DELETE` | `/suppliers/{supplierId}` | Baja física |
+
+`DELETE` es baja física. Si el proveedor tiene compras registradas, la clave
+foránea lo impide y la API responde 409 `SUPPLIER_IN_USE`. Para retirar un
+proveedor conservando su historial:
+
+```
+PATCH /suppliers/{supplierId}   {"supplierActive": false}
+```
+
+Un proveedor inactivo no admite compras nuevas (responde 409 `SUPPLIER_INACTIVE`),
+pero conserva todas las compras ya registradas y aparece en los reportes
+históricos.
+
+### Compras
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/purchases` | Listado paginado con filtros. Solo cabeceras |
+| `GET` | `/purchases/{purchaseId}` | Una compra con todas sus líneas |
+| `POST` | `/purchases` | Registra una compra |
+| `PATCH` | `/purchases/{purchaseId}` | Corrección parcial |
+
+#### Diferencias con ventas
+
+A diferencia de una venta, la compra **no es un documento fiscal**: no lleva
+número de comprobante y la fecha y la hora sí se pueden corregir con `PATCH`.
+
+La compra **sí recibe `unitPrice`** en cada línea: es el costo pagado al
+proveedor, un dato que no está en el catálogo (los productos guardan el precio
+de venta, no el de costo). El backend calcula `partial`, `subTotal`, `igv` y
+`total`; enviar esos campos en el cuerpo devuelve 400.
+
+#### Reportes en PDF
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/purchases/suppliers-amount-report?from=YYYY-MM-DD&to=YYYY-MM-DD` | Monto de compra por proveedor del periodo |
+| `POST` | `/purchases/suppliers-amount-report/send-email?email=...&from=...&to=...` | Envía el reporte por correo |
+| `GET` | `/purchases/purchases-by-supplier-report?supplierId=UUID&from=...&to=...` | Detalle de compras de un proveedor concreto |
+| `POST` | `/purchases/purchases-by-supplier-report/send-email?email=...&supplierId=UUID&from=...&to=...` | Envía por correo |
+
+`suppliers-amount-report` hace un INNER JOIN entre proveedores y compras: solo
+aparecen los que tienen al menos una compra en el periodo, ordenados por monto
+descendente. Columnas: `#`, `Proveedor`, `IGV`, `Monto`.
+
+`purchases-by-supplier-report` requiere `supplierId` obligatorio (404 si no
+existe) y lista una fila por compra del proveedor en el rango. Columnas: `#`,
+`RUC`, `Proveedor`, `Fecha`, `IGV`, `Monto`.
+
+El parámetro `to` es opcional en todos los reportes: si se omite, es el reporte
+del día `from`. Todos se arman en memoria, sin escribir a disco. Si `to` < `from`,
+responden 400 `PURCHASES_REPORT_RANGE_INVALID`. Si el `supplierId` no existe,
+responden 404 `SUPPLIER_NOT_FOUND`. Si el SMTP falla, responden 503
+`SERVICE_UNAVAILABLE`.
 
 ### Marcas
 
@@ -481,6 +576,7 @@ completo sin que el front tenga que rellenar huecos:
 | `GET` | `/dashboard/monthly-sales-by-ubigeo?year=2026&departmentId=15` | Ventas mensuales de una localidad |
 | `GET` | `/dashboard/monthly-sales-by-category?year=2026&categoryId=...` | Ventas mensuales de una categoría |
 | `GET` | `/dashboard/top-product-by-month?year=2026` | Producto más vendido de cada mes |
+| `GET` | `/dashboard/yearly-sales` | Totales de venta agrupados por año (serie histórica) |
 
 ```json
 {
@@ -504,13 +600,32 @@ respuesta con cero, y no faltan del array. `monthly-sales-by-category` suma
 `sale_details.partial` —no `sales.total`— porque una misma venta puede mezclar
 productos de varias categorías.
 
+**Compras — indicadores del mes** — responden `null` en los `top-*` cuando el mes
+no tiene compras:
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/dashboard/total-purchases` | Suma de totales y cantidad de compras del mes |
+| `GET` | `/dashboard/top-purchased-product` | Producto con más unidades compradas en el mes |
+| `GET` | `/dashboard/top-supplier` | Proveedor con mayor monto comprado en el mes |
+
+**Compras — series anuales** — mismo patrón que las de ventas (los doce meses
+siempre presentes, con `"0.00"` o `null` en los meses sin compras):
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/dashboard/monthly-purchases?year=2026` | Compras mensuales del año |
+| `GET` | `/dashboard/monthly-purchases-by-category?year=2026&categoryId=...` | Compras mensuales de una categoría |
+| `GET` | `/dashboard/top-purchased-product-by-month?year=2026` | Producto más comprado de cada mes |
+| `GET` | `/dashboard/yearly-purchases` | Totales de compra agrupados por año (serie histórica) |
+
 ## Respuestas
 
 | Código | Cuándo |
 |---|---|
 | `200` | Consulta resuelta, o modificación aplicada |
-| `201` | Recurso creado (producto, marca, categoría, cliente o venta) |
-| `204` | Producto, marca, categoría o cliente eliminados. Sin cuerpo |
+| `201` | Recurso creado (producto, marca, categoría, cliente, proveedor, venta o compra) |
+| `204` | Producto, marca, categoría, cliente o proveedor eliminados. Sin cuerpo |
 | `400` | Validación del cuerpo, UUID mal formado, rango de precio invertido, documento inválido |
 | `404` | El recurso solicitado no existe |
 | `409` | Conflicto: duplicado, recurso en uso, cliente o producto inactivo, serie agotada |
@@ -537,9 +652,9 @@ texto de `message`, que puede reescribirse. Los códigos actuales son:
 
 | Categoría | Códigos |
 |---|---|
-| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CATEGORY_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND` |
-| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_IN_USE`, `CATEGORY_IN_USE`, `CLIENT_IN_USE`, `BRAND_ALREADY_EXISTS`, `CATEGORY_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
-| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CATEGORY_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA` |
+| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CATEGORY_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND`, `PURCHASE_NOT_FOUND`, `SUPPLIER_NOT_FOUND` |
+| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_IN_USE`, `CATEGORY_IN_USE`, `CLIENT_IN_USE`, `SUPPLIER_IN_USE`, `BRAND_ALREADY_EXISTS`, `CATEGORY_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SUPPLIER_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
+| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CATEGORY_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA`, `SALES_REPORT_RANGE_INVALID`, `PURCHASES_REPORT_RANGE_INVALID` |
 | Dominio genérico (422) | `INVALID_SALE`, `UNPROCESSABLE_ENTITY` |
 | Límite de peticiones (429) | `TOO_MANY_REQUESTS` |
 | Infraestructura | `SERVICE_UNAVAILABLE` (503: base caída o correo no disponible), `INTERNAL_ERROR` (500) |

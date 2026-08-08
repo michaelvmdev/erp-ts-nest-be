@@ -9,6 +9,79 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 ### Añadido
 
+#### Backend — Reportes en PDF de compras a proveedores
+
+- `GET /purchases/suppliers-amount-report?from&to` — PDF con IGV y monto de
+  compra por proveedor del periodo; solo incluye proveedores con al menos una
+  compra (INNER JOIN), ordenados por monto descendente.
+- `POST /purchases/suppliers-amount-report/send-email?email&from&to` — envía
+  ese PDF por correo.
+- `GET /purchases/purchases-by-supplier-report?supplierId=UUID&from&to` — PDF
+  con el detalle de compras de un proveedor concreto (`supplierId` obligatorio;
+  404 `SUPPLIER_NOT_FOUND` si no existe). Columnas: `#`, `RUC`, `Proveedor`,
+  `Fecha`, `IGV`, `Monto`.
+- `POST /purchases/purchases-by-supplier-report/send-email?email&supplierId&from&to`
+  — envía ese PDF por correo.
+- Error de dominio: `InvalidPurchasesReportRangeError`
+  (`PURCHASES_REPORT_RANGE_INVALID`, 400) cuando `to` < `from`.
+
+#### Backend — Reportes en PDF de ventas por cliente
+
+- `GET /sales/clients-amount-report?from&to` — PDF con IGV y monto vendido a
+  cada cliente que compra en el periodo (INNER JOIN), ordenados por monto
+  descendente.
+- `POST /sales/clients-amount-report/send-email?email&from&to`
+- `GET /sales/sales-by-client-report?clientId=UUID&from&to` — PDF con el
+  detalle de ventas de un cliente concreto (`clientId` obligatorio; 404 si no
+  existe). Columnas: `#`, `Tipo`, `Nro Doc`, `Cliente`, `Fecha`, `IGV`, `Monto`.
+- `POST /sales/sales-by-client-report/send-email?email&clientId&from&to`
+- Actualización de los generadores PDF existentes para mejorar layout y añadir
+  truncado de texto largo con `recortar()`.
+
+#### Backend — Reporte de productos vendidos
+
+- `GET /sales/products-report?from&to&orderBy=amount|quantity` — PDF con los
+  productos vendidos en el periodo, ordenados por monto (defecto) o por
+  cantidad. Columnas: `#`, `Código`, `Producto`, `Categoría`, `Unidades`,
+  `Monto`.
+- `POST /sales/products-report/send-email?email&from&to&orderBy`
+
+#### Backend — Logo, favicon y rebranding
+
+- Logo `erp-mv-dev-logo.png` y favicon `erp-mv-dev.ico` incluidos en PDFs,
+  Swagger (topbar) y Scalar. Assets servidos estáticamente en `/assets`.
+- Nombre de la empresa en PDFs y documentación: **Michael Dev S.A.C.**
+- Función `brandLogoPng()` con caché en `src/shared/infrastructure/assets.ts`.
+- Renombrado de `crud-ts-nest-be` a `erp-ts-nest-be` (app, `package.json`,
+  Swagger/Scalar).
+
+#### Backend — Primer reporte PDF de ventas
+
+- `GET /sales/report?from=YYYY-MM-DD&to=YYYY-MM-DD` — resumen de ventas del
+  periodo (una fila por comprobante). Respuesta: `{ fileName, mimeType, base64 }`.
+- `POST /sales/report/send-email?email&from&to` — genera el PDF y lo adjunta a
+  un correo. Respuesta: `{ to, messageId, sentAt }`.
+- Patrón PDF establecido para todos los reportes: pdfkit, en memoria, sin
+  escritura a disco.
+- Error 400 `SALES_REPORT_RANGE_INVALID` cuando `to` < `from`.
+- Error 503 `SERVICE_UNAVAILABLE` cuando el SMTP no está configurado o falla.
+
+#### Backend — Módulo de compras y proveedores
+
+- **Proveedores** (`/suppliers`): GET lista, GET uno, POST, PATCH, DELETE. DELETE
+  es baja física; si el proveedor tiene compras registradas responde 409
+  `SUPPLIER_IN_USE`. Un proveedor inactivo no admite compras nuevas
+  (409 `SUPPLIER_INACTIVE`).
+- **Compras** (`/purchases`): GET lista, GET uno, POST, PATCH. Sin número de
+  comprobante (no es documento fiscal). `unitPrice` se recibe en cada línea;
+  el backend calcula `partial`, `subTotal`, `igv` y `total`. La fecha y la hora
+  sí se pueden corregir con `PATCH` (diferencia clave con ventas).
+- Dashboard ampliado con indicadores de compras:
+  - Del mes: `total-purchases`, `top-purchased-product`, `top-supplier`.
+  - Series anuales: `monthly-purchases`, `monthly-purchases-by-category`,
+    `top-purchased-product-by-month`, `yearly-purchases`.
+- `GET /dashboard/yearly-sales` — totales de venta por año (serie histórica).
+
 #### Backend
 
 - Proyecto NestJS 11 con TypeScript en modo estricto, ESLint y Prettier.
