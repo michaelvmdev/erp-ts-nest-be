@@ -8,9 +8,11 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -18,6 +20,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateCreditNoteUseCase } from '../../application/create-credit-note.use-case';
 import { FindCreditNoteUseCase } from '../../application/find-credit-note.use-case';
@@ -31,6 +34,8 @@ import {
 import { SearchCreditNotesQueryDto } from './dto/search-credit-notes.query.dto';
 
 @ApiTags('credit-notes')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('credit-notes')
 export class CreditNotesController {
   constructor(

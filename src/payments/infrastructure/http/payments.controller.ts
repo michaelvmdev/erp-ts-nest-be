@@ -1,7 +1,8 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, Param, Post, Query,
+  Body, Controller, Delete, Get, HttpCode, Param, Post, Query, UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { CreatePaymentUseCase } from '../../application/create-payment.use-case';
 import { DeletePaymentUseCase } from '../../application/delete-payment.use-case';
 import { SearchPaymentsUseCase } from '../../application/search-payments.use-case';
@@ -10,6 +11,8 @@ import { CreatePaymentRequestDto } from './dto/create-payment.request.dto';
 import { PaginatedPaymentsResponseDto, PaymentResponseDto } from './dto/payment.response.dto';
 
 @ApiTags('payments')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('payments')
 export class PaymentsController {
   constructor(

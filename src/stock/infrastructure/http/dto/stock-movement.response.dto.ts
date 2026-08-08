@@ -9,9 +9,6 @@ export class StockMovementResponseDto {
   @ApiProperty({ format: 'uuid' })
   productId!: string;
 
-  @ApiProperty({ example: 'PROD-001' })
-  productCode!: string;
-
   @ApiProperty({ example: 'Cable HDMI 2m' })
   productName!: string;
 
@@ -43,7 +40,6 @@ export class StockMovementResponseDto {
     const dto = new StockMovementResponseDto();
     dto.movementId = m.movementId;
     dto.productId = m.productId;
-    dto.productCode = m.productCode;
     dto.productName = m.productName;
     dto.warehouseId = m.warehouseId;
     dto.warehouseCode = m.warehouseCode;

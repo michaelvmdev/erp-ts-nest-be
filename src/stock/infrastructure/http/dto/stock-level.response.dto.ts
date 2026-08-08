@@ -6,9 +6,6 @@ export class StockLevelResponseDto {
   @ApiProperty({ format: 'uuid' })
   productId!: string;
 
-  @ApiProperty({ example: 'PROD-001' })
-  productCode!: string;
-
   @ApiProperty({ example: 'Cable HDMI 2m' })
   productName!: string;
 
@@ -27,7 +24,6 @@ export class StockLevelResponseDto {
   static fromDomain(level: StockLevel): StockLevelResponseDto {
     const dto = new StockLevelResponseDto();
     dto.productId = level.productId;
-    dto.productCode = level.productCode;
     dto.productName = level.productName;
     dto.warehouseId = level.warehouseId;
     dto.warehouseCode = level.warehouseCode;

@@ -37,7 +37,7 @@ export class TypeOrmStockRepository implements StockRepository {
       JOIN products p        ON p.product_id   = sm.product_id
       JOIN warehouses w      ON w.warehouse_id  = sm.warehouse_id
       ${where}
-      GROUP BY sm.product_id, p.product_code, p.product_name,
+      GROUP BY sm.product_id, p.product_name,
                sm.warehouse_id, w.warehouse_code, w.warehouse_description
       ${having}
     `;
@@ -51,7 +51,6 @@ export class TypeOrmStockRepository implements StockRepository {
     const dataSql = `
       SELECT
         sm.product_id        AS "productId",
-        p.product_code       AS "productCode",
         p.product_name       AS "productName",
         sm.warehouse_id      AS "warehouseId",
         w.warehouse_code     AS "warehouseCode",
@@ -66,7 +65,6 @@ export class TypeOrmStockRepository implements StockRepository {
 
     const items: StockLevel[] = rows.map((r) => ({
       productId: r['productId'] as string,
-      productCode: r['productCode'] as string,
       productName: r['productName'] as string,
       warehouseId: r['warehouseId'] as string,
       warehouseCode: r['warehouseCode'] as string,
@@ -122,7 +120,6 @@ export class TypeOrmStockRepository implements StockRepository {
       SELECT
         sm.movement_id    AS "movementId",
         sm.product_id     AS "productId",
-        p.product_code    AS "productCode",
         p.product_name    AS "productName",
         sm.warehouse_id   AS "warehouseId",
         w.warehouse_code  AS "warehouseCode",
@@ -145,7 +142,6 @@ export class TypeOrmStockRepository implements StockRepository {
     const items: StockMovement[] = rows.map((r) => ({
       movementId: r['movementId'] as string,
       productId: r['productId'] as string,
-      productCode: r['productCode'] as string,
       productName: r['productName'] as string,
       warehouseId: r['warehouseId'] as string,
       warehouseCode: r['warehouseCode'] as string,

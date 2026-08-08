@@ -1,10 +1,12 @@
-import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiBadRequestResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { GetStockLevelsUseCase } from '../../application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from '../../application/get-stock-movements.use-case';
@@ -20,6 +22,8 @@ import {
 } from './dto/stock-movement.response.dto';
 
 @ApiTags('stock')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('stock')
 export class StockController {
   constructor(

@@ -8,10 +8,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UseGuards,
   Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -20,6 +22,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreatePurchaseOrderUseCase } from '../../application/create-purchase-order.use-case';
 import { FindPurchaseOrderUseCase } from '../../application/find-purchase-order.use-case';
@@ -35,6 +38,8 @@ import { SearchPurchaseOrdersQueryDto } from './dto/search-purchase-orders.query
 import { UpdatePurchaseOrderRequestDto } from './dto/update-purchase-order.request.dto';
 
 @ApiTags('purchase-orders')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('purchase-orders')
 export class PurchaseOrdersController {
   constructor(

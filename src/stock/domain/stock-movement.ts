@@ -3,7 +3,6 @@ export type StockMovementType = 'purchase_in' | 'sale_out' | 'return_in' | 'adju
 export interface StockMovement {
   readonly movementId: string;
   readonly productId: string;
-  readonly productCode: string;
   readonly productName: string;
   readonly warehouseId: string;
   readonly warehouseCode: string;

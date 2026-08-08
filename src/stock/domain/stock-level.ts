@@ -1,6 +1,5 @@
 export interface StockLevel {
   readonly productId: string;
-  readonly productCode: string;
   readonly productName: string;
   readonly warehouseId: string;
   readonly warehouseCode: string;

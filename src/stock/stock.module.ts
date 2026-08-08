@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { GetStockLevelsUseCase } from './application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from './application/get-stock-movements.use-case';
 import { STOCK_REPOSITORY } from './domain/stock.repository';
@@ -8,6 +9,7 @@ import { TypeOrmStockWriterRepository } from './infrastructure/persistence/typeo
 import { StockController } from './infrastructure/http/stock.controller';
 
 @Module({
+  imports: [AuthModule],
   controllers: [StockController],
   providers: [
     TypeOrmStockRepository,

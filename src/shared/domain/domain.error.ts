@@ -29,3 +29,6 @@ export abstract class InvalidInputError extends DomainError {}
 
 /** La operacion choca con el estado actual del sistema. */
 export abstract class ConflictError extends DomainError {}
+
+/** Identidad no verificada (credenciales incorrectas o sesión caducada). */
+export abstract class UnauthorizedError extends DomainError {}

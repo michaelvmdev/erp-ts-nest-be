@@ -13,6 +13,7 @@ import {
   DomainError,
   InvalidInputError,
   NotFoundError,
+  UnauthorizedError,
 } from '../../domain/domain.error';
 import { ApiErrorDto } from './api-error.dto';
 
@@ -101,6 +102,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
   private estadoPara(error: DomainError): number {
     if (error instanceof NotFoundError) return HttpStatus.NOT_FOUND;
     if (error instanceof ConflictError) return HttpStatus.CONFLICT;
+    if (error instanceof UnauthorizedError) return HttpStatus.UNAUTHORIZED;
     if (error instanceof InvalidInputError) return HttpStatus.BAD_REQUEST;
     return HttpStatus.UNPROCESSABLE_ENTITY;
   }

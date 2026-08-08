@@ -1,4 +1,4 @@
-import { InvalidInputError, NotFoundError } from '../../shared/domain/domain.error';
+import { ConflictError, NotFoundError, UnauthorizedError } from '../../shared/domain/domain.error';
 import { UuidValueObject } from '../../shared/domain/uuid.value-object';
 
 export class UserId extends UuidValueObject {
@@ -12,12 +12,12 @@ export class UserNotFoundError extends NotFoundError {
   constructor(id: string) { super(`El usuario ${id} no existe.`); }
 }
 
-export class UserEmailConflictError extends InvalidInputError {
+export class UserEmailConflictError extends ConflictError {
   readonly code = 'USER_EMAIL_CONFLICT';
   constructor(email: string) { super(`El correo ${email} ya está en uso.`); }
 }
 
-export class InvalidCredentialsError extends InvalidInputError {
+export class InvalidCredentialsError extends UnauthorizedError {
   readonly code = 'INVALID_CREDENTIALS';
   constructor() { super('Credenciales incorrectas.'); }
 }
