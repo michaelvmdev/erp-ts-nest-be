@@ -19,6 +19,7 @@ import { SalesModule } from './sales/sales.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { UbigeoModule } from './ubigeo/ubigeo.module';
 import { UnitsModule } from './units/units.module';
+import { WarehousesModule } from './warehouses/warehouses.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { UnitsModule } from './units/units.module';
     ClientsModule,
     BrandsModule,
     UnitsModule,
+    WarehousesModule,
     CategoriesModule,
     ProductsModule,
     PurchasesModule,
