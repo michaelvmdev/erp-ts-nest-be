@@ -27,6 +27,8 @@ export interface EnvVars {
   MAIL_USER: string;
   MAIL_PASSWORD: string;
   MAIL_FROM: string;
+  JWT_SECRET: string;
+  JWT_EXPIRES_IN: string;
 }
 
 const REQUERIDAS = [
@@ -129,5 +131,7 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     MAIL_USER: asString(config.MAIL_USER).trim(),
     MAIL_PASSWORD: asString(config.MAIL_PASSWORD),
     MAIL_FROM: asString(config.MAIL_FROM).trim(),
+    JWT_SECRET: asString(config.JWT_SECRET),
+    JWT_EXPIRES_IN: asString(config.JWT_EXPIRES_IN) || '7d',
   };
 }

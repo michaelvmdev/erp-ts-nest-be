@@ -25,6 +25,7 @@ import { StockModule } from './stock/stock.module';
 import { CreditNotesModule } from './credit-notes/credit-notes.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { PaymentsModule } from './payments/payments.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { PaymentsModule } from './payments/payments.module';
     CreditNotesModule,
     PurchaseOrdersModule,
     PaymentsModule,
+    AuthModule,
     CategoriesModule,
     ProductsModule,
     PurchasesModule,
