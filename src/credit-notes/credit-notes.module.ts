@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SalesModule } from '../sales/sales.module';
+import {
+  SaleDetailOrmEntity,
+  SaleOrmEntity,
+} from '../sales/infrastructure/persistence/sale.orm-entity';
 import { CreateCreditNoteUseCase } from './application/create-credit-note.use-case';
 import { FindCreditNoteUseCase } from './application/find-credit-note.use-case';
 import { SearchCreditNotesUseCase } from './application/search-credit-notes.use-case';
@@ -14,10 +17,12 @@ import { TypeOrmCreditNoteRepository } from './infrastructure/persistence/typeor
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CreditNoteOrmEntity, CreditNoteDetailOrmEntity]),
-    // Importa SalesModule para acceder a SaleOrmEntity y SaleDetailOrmEntity
-    // que el adaptador necesita para resolver precios de la venta original.
-    SalesModule,
+    TypeOrmModule.forFeature([
+      CreditNoteOrmEntity,
+      CreditNoteDetailOrmEntity,
+      SaleOrmEntity,
+      SaleDetailOrmEntity,
+    ]),
   ],
   controllers: [CreditNotesController],
   providers: [
