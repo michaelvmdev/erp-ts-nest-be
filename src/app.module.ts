@@ -23,6 +23,7 @@ import { WarehousesModule } from './warehouses/warehouses.module';
 import { PriceListsModule } from './price-lists/price-lists.module';
 import { StockModule } from './stock/stock.module';
 import { CreditNotesModule } from './credit-notes/credit-notes.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { CreditNotesModule } from './credit-notes/credit-notes.module';
     PriceListsModule,
     StockModule,
     CreditNotesModule,
+    PurchaseOrdersModule,
     CategoriesModule,
     ProductsModule,
     PurchasesModule,
