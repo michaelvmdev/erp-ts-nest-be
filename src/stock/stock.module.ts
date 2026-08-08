@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { GetStockLevelsUseCase } from './application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from './application/get-stock-movements.use-case';
 import { STOCK_REPOSITORY } from './domain/stock.repository';
+import { STOCK_WRITER } from './domain/stock-writer';
 import { TypeOrmStockRepository } from './infrastructure/persistence/typeorm-stock.repository';
+import { TypeOrmStockWriterRepository } from './infrastructure/persistence/typeorm-stock-writer.repository';
 import { StockController } from './infrastructure/http/stock.controller';
 
 @Module({
@@ -10,8 +12,11 @@ import { StockController } from './infrastructure/http/stock.controller';
   providers: [
     TypeOrmStockRepository,
     { provide: STOCK_REPOSITORY, useExisting: TypeOrmStockRepository },
+    TypeOrmStockWriterRepository,
+    { provide: STOCK_WRITER, useExisting: TypeOrmStockWriterRepository },
     GetStockLevelsUseCase,
     GetStockMovementsUseCase,
   ],
+  exports: [STOCK_WRITER],
 })
 export class StockModule {}

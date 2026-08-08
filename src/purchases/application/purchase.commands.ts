@@ -18,6 +18,8 @@ export interface CreatePurchaseCommand {
   readonly purchaseDate?: string;
   readonly purchaseHour?: string;
   readonly purchaseDetails: readonly PurchaseLineCommand[];
+  /** Si se provee, se registran movimientos de stock (purchase_in) por cada linea. */
+  readonly warehouseId?: string;
 }
 
 export interface UpdatePurchaseCommand {

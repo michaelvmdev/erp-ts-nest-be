@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { ClientId } from '../../clients/domain/value-objects/client-id.value-object';
+import { STOCK_WRITER } from '../../stock/domain/stock-writer';
+import type { StockWriter } from '../../stock/domain/stock-writer';
 import { Sale } from '../domain/sale';
 import {
   InactiveClientError,
@@ -22,6 +24,8 @@ export class CreateSaleUseCase {
     private readonly sales: SaleRepository,
     @Inject(SALE_CATALOG)
     private readonly catalogo: SaleCatalog,
+    @Inject(STOCK_WRITER)
+    private readonly stockWriter: StockWriter,
   ) {}
 
   async execute(command: CreateSaleCommand): Promise<Sale> {
@@ -54,7 +58,7 @@ export class CreateSaleUseCase {
     // El numero se reserva y la venta se guarda en la misma transaccion: el
     // repositorio invoca esta funcion con el correlativo ya tomado. Ver el
     // comentario de `emit` en el puerto.
-    return this.sales.emit(command.saleTypeId, (numero) =>
+    const sale = await this.sales.emit(command.saleTypeId, (numero) =>
       Sale.create({
         id: SaleId.of(randomUUID()),
         number: numero,
@@ -65,6 +69,21 @@ export class CreateSaleUseCase {
         lines: lineas,
       }),
     );
+
+    if (command.warehouseId) {
+      await this.stockWriter.insertMovements(
+        sale.lines.map((l) => ({
+          productId: l.productId.value,
+          warehouseId: command.warehouseId!,
+          movementType: 'sale_out' as const,
+          quantity: -l.quantity,
+          unitCost: null,
+          referenceId: sale.id.value,
+        })),
+      );
+    }
+
+    return sale;
   }
 }
 

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductOrmEntity } from '../products/infrastructure/persistence/product.orm-entity';
 import { SupplierOrmEntity } from '../suppliers/infrastructure/persistence/supplier.orm-entity';
 import { MailModule } from '../mail/mail.module';
+import { StockModule } from '../stock/stock.module';
 import { CreatePurchaseUseCase } from './application/create-purchase.use-case';
 import { FindPurchaseUseCase } from './application/find-purchase.use-case';
 import { GeneratePurchasesBySupplierReportPdfUseCase } from './application/generate-purchases-by-supplier-report-pdf.use-case';
@@ -45,8 +46,8 @@ import { SupplierPurchasesAmountReportPdfGenerator } from './infrastructure/pdf/
       SupplierOrmEntity,
       ProductOrmEntity,
     ]),
-    // Envio de correo para adjuntar los reportes en PDF.
     MailModule,
+    StockModule,
   ],
   controllers: [PurchasesController],
   providers: [

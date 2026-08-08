@@ -85,6 +85,16 @@ export class CreatePurchaseRequestDto {
   })
   purchaseHour?: string;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Almacen de entrada. Si se provee, se generan movimientos de stock (purchase_in) ' +
+      'por cada linea de la compra.',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'warehouseId debe ser un UUID valido.' })
+  warehouseId?: string;
+
   @ApiProperty({
     type: [PurchaseLineRequestDto],
     minItems: 1,

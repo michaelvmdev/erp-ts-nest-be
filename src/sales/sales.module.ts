@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientOrmEntity } from '../clients/infrastructure/persistence/client.orm-entity';
 import { MailModule } from '../mail/mail.module';
 import { ProductOrmEntity } from '../products/infrastructure/persistence/product.orm-entity';
+import { StockModule } from '../stock/stock.module';
 import { CreateSaleUseCase } from './application/create-sale.use-case';
 import { FindSaleUseCase } from './application/find-sale.use-case';
 import { GenerateClientSalesAmountReportPdfUseCase } from './application/generate-client-sales-amount-report-pdf.use-case';
@@ -66,8 +67,8 @@ import { TypeOrmSaleRepository } from './infrastructure/persistence/typeorm-sale
       ClientOrmEntity,
       ProductOrmEntity,
     ]),
-    // Envio de correo para adjuntar el comprobante en PDF.
     MailModule,
+    StockModule,
   ],
   controllers: [SalesController],
   providers: [

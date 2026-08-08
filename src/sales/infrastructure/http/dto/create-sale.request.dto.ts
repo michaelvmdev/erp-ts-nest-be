@@ -89,6 +89,16 @@ export class CreateSaleRequestDto {
   })
   saleHour?: string;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Almacen de salida. Si se provee, se generan movimientos de stock (sale_out) ' +
+      'por cada linea de la venta.',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'warehouseId debe ser un UUID valido.' })
+  warehouseId?: string;
+
   @ApiProperty({
     type: [SaleLineRequestDto],
     minItems: 1,

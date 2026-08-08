@@ -20,6 +20,8 @@ export interface CreateSaleCommand {
   readonly saleDate?: string;
   readonly saleHour?: string;
   readonly saleDetails: readonly SaleLineCommand[];
+  /** Si se provee, se registran movimientos de stock (sale_out) por cada linea. */
+  readonly warehouseId?: string;
 }
 
 export interface UpdateSaleCommand {
