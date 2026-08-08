@@ -51,3 +51,11 @@ export interface ClientSalesAmountReportPdfRenderer {
 export const CLIENT_SALES_AMOUNT_REPORT_PDF_RENDERER = Symbol(
   'ClientSalesAmountReportPdfRenderer',
 );
+
+export interface ClientSalesAmountReportExcelRenderer {
+  render(view: ClientSalesAmountReportView): Promise<Buffer>;
+}
+
+export const CLIENT_SALES_AMOUNT_REPORT_EXCEL_RENDERER = Symbol(
+  'ClientSalesAmountReportExcelRenderer',
+);

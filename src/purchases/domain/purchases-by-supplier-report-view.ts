@@ -58,3 +58,11 @@ export interface PurchasesBySupplierReportPdfRenderer {
 export const PURCHASES_BY_SUPPLIER_REPORT_PDF_RENDERER = Symbol(
   'PurchasesBySupplierReportPdfRenderer',
 );
+
+export interface PurchasesBySupplierReportExcelRenderer {
+  render(view: PurchasesBySupplierReportView): Promise<Buffer>;
+}
+
+export const PURCHASES_BY_SUPPLIER_REPORT_EXCEL_RENDERER = Symbol(
+  'PurchasesBySupplierReportExcelRenderer',
+);

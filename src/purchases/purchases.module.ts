@@ -12,9 +12,14 @@ import { SearchPurchasesUseCase } from './application/search-purchases.use-case'
 import { SendPurchasesBySupplierReportPdfUseCase } from './application/send-purchases-by-supplier-report-pdf.use-case';
 import { SendSupplierPurchasesAmountReportPdfUseCase } from './application/send-supplier-purchases-amount-report-pdf.use-case';
 import { UpdatePurchaseUseCase } from './application/update-purchase.use-case';
+import { GenerateSupplierPurchasesAmountReportExcelUseCase } from './application/generate-supplier-purchases-amount-report-excel.use-case';
+import { SendSupplierPurchasesAmountReportExcelUseCase } from './application/send-supplier-purchases-amount-report-excel.use-case';
+import { GeneratePurchasesBySupplierReportExcelUseCase } from './application/generate-purchases-by-supplier-report-excel.use-case';
+import { SendPurchasesBySupplierReportExcelUseCase } from './application/send-purchases-by-supplier-report-excel.use-case';
 import {
   PURCHASES_BY_SUPPLIER_REPORT_PDF_RENDERER,
   PURCHASES_BY_SUPPLIER_REPORT_READER,
+  PURCHASES_BY_SUPPLIER_REPORT_EXCEL_RENDERER,
 } from './domain/purchases-by-supplier-report-view';
 import {
   PURCHASE_CATALOG,
@@ -23,6 +28,7 @@ import {
 import {
   SUPPLIER_PURCHASES_AMOUNT_REPORT_PDF_RENDERER,
   SUPPLIER_PURCHASES_AMOUNT_REPORT_READER,
+  SUPPLIER_PURCHASES_AMOUNT_REPORT_EXCEL_RENDERER,
 } from './domain/supplier-purchases-amount-report-view';
 import { PurchasesController } from './infrastructure/http/purchases.controller';
 import {
@@ -34,6 +40,8 @@ import { TypeOrmPurchaseRepository } from './infrastructure/persistence/typeorm-
 import { TypeOrmSupplierPurchasesAmountReportReader } from './infrastructure/persistence/typeorm-supplier-purchases-amount-report.reader';
 import { PurchasesBySupplierReportPdfGenerator } from './infrastructure/pdf/purchases-by-supplier-report-pdf.generator';
 import { SupplierPurchasesAmountReportPdfGenerator } from './infrastructure/pdf/supplier-purchases-amount-report-pdf.generator';
+import { SupplierPurchasesAmountReportExcelGenerator } from './infrastructure/excel/supplier-purchases-amount-report-excel.generator';
+import { PurchasesBySupplierReportExcelGenerator } from './infrastructure/excel/purchases-by-supplier-report-excel.generator';
 
 @Module({
   imports: [
@@ -78,6 +86,11 @@ import { SupplierPurchasesAmountReportPdfGenerator } from './infrastructure/pdf/
       provide: PURCHASES_BY_SUPPLIER_REPORT_PDF_RENDERER,
       useExisting: PurchasesBySupplierReportPdfGenerator,
     },
+    // Excel generators
+    SupplierPurchasesAmountReportExcelGenerator,
+    { provide: SUPPLIER_PURCHASES_AMOUNT_REPORT_EXCEL_RENDERER, useExisting: SupplierPurchasesAmountReportExcelGenerator },
+    PurchasesBySupplierReportExcelGenerator,
+    { provide: PURCHASES_BY_SUPPLIER_REPORT_EXCEL_RENDERER, useExisting: PurchasesBySupplierReportExcelGenerator },
     FindPurchaseUseCase,
     SearchPurchasesUseCase,
     CreatePurchaseUseCase,
@@ -86,6 +99,10 @@ import { SupplierPurchasesAmountReportPdfGenerator } from './infrastructure/pdf/
     GeneratePurchasesBySupplierReportPdfUseCase,
     SendSupplierPurchasesAmountReportPdfUseCase,
     SendPurchasesBySupplierReportPdfUseCase,
+    GenerateSupplierPurchasesAmountReportExcelUseCase,
+    SendSupplierPurchasesAmountReportExcelUseCase,
+    GeneratePurchasesBySupplierReportExcelUseCase,
+    SendPurchasesBySupplierReportExcelUseCase,
   ],
 })
 export class PurchasesModule {}

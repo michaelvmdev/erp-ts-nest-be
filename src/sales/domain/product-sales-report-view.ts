@@ -60,3 +60,11 @@ export interface ProductSalesReportPdfRenderer {
 export const PRODUCT_SALES_REPORT_PDF_RENDERER = Symbol(
   'ProductSalesReportPdfRenderer',
 );
+
+export interface ProductSalesReportExcelRenderer {
+  render(view: ProductSalesReportView): Promise<Buffer>;
+}
+
+export const PRODUCT_SALES_REPORT_EXCEL_RENDERER = Symbol(
+  'ProductSalesReportExcelRenderer',
+);

@@ -36,6 +36,14 @@ import { SendSalePdfUseCase } from '../../application/send-sale-pdf.use-case';
 import { SendSalesByClientReportPdfUseCase } from '../../application/send-sales-by-client-report-pdf.use-case';
 import { SendSalesReportPdfUseCase } from '../../application/send-sales-report-pdf.use-case';
 import { UpdateSaleUseCase } from '../../application/update-sale.use-case';
+import { GenerateSalesReportExcelUseCase } from '../../application/generate-sales-report-excel.use-case';
+import { SendSalesReportExcelUseCase } from '../../application/send-sales-report-excel.use-case';
+import { GenerateProductSalesReportExcelUseCase } from '../../application/generate-product-sales-report-excel.use-case';
+import { SendProductSalesReportExcelUseCase } from '../../application/send-product-sales-report-excel.use-case';
+import { GenerateClientSalesAmountReportExcelUseCase } from '../../application/generate-client-sales-amount-report-excel.use-case';
+import { SendClientSalesAmountReportExcelUseCase } from '../../application/send-client-sales-amount-report-excel.use-case';
+import { GenerateSalesByClientReportExcelUseCase } from '../../application/generate-sales-by-client-report-excel.use-case';
+import { SendSalesByClientReportExcelUseCase } from '../../application/send-sales-by-client-report-excel.use-case';
 import { CreateSaleRequestDto } from './dto/create-sale.request.dto';
 import {
   PaginatedSalesResponseDto,
@@ -63,6 +71,10 @@ import { SendSalesReportEmailResponseDto } from './dto/send-sales-report-email.r
 import { SendSaleEmailRequestDto } from './dto/send-sale-email.request.dto';
 import { SendSaleEmailResponseDto } from './dto/send-sale-email.response.dto';
 import { UpdateSaleRequestDto } from './dto/update-sale.request.dto';
+import { SalesReportExcelResponseDto } from './dto/sales-report-excel.response.dto';
+import { ProductSalesReportExcelResponseDto } from './dto/product-sales-report-excel.response.dto';
+import { ClientSalesAmountReportExcelResponseDto } from './dto/client-sales-amount-report-excel.response.dto';
+import { SalesByClientReportExcelResponseDto } from './dto/sales-by-client-report-excel.response.dto';
 
 const UUID_EJEMPLO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 
@@ -84,6 +96,14 @@ export class SalesController {
     private readonly sendProductSalesReportPdf: SendProductSalesReportPdfUseCase,
     private readonly sendClientSalesAmountReportPdf: SendClientSalesAmountReportPdfUseCase,
     private readonly sendSalesByClientReportPdf: SendSalesByClientReportPdfUseCase,
+    private readonly generateSalesReportExcel: GenerateSalesReportExcelUseCase,
+    private readonly sendSalesReportExcel: SendSalesReportExcelUseCase,
+    private readonly generateProductSalesReportExcel: GenerateProductSalesReportExcelUseCase,
+    private readonly sendProductSalesReportExcel: SendProductSalesReportExcelUseCase,
+    private readonly generateClientSalesAmountReportExcel: GenerateClientSalesAmountReportExcelUseCase,
+    private readonly sendClientSalesAmountReportExcel: SendClientSalesAmountReportExcelUseCase,
+    private readonly generateSalesByClientReportExcel: GenerateSalesByClientReportExcelUseCase,
+    private readonly sendSalesByClientReportExcel: SendSalesByClientReportExcelUseCase,
   ) {}
 
   // La ruta sin parametro va antes que ':saleId' para que no se interprete como
@@ -211,6 +231,44 @@ export class SalesController {
     return SendSalesReportEmailResponseDto.fromOutput(output);
   }
 
+  @Get('report-excel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar el reporte de ventas en Excel',
+    description:
+      'Genera un reporte en Excel (.xlsx) de las ventas emitidas en un rango de fechas ' +
+      'y lo devuelve en base64. `from` es obligatorio; `to` opcional.',
+  })
+  @ApiOkResponse({
+    description: 'Excel del reporte en base64.',
+    type: SalesReportExcelResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Fecha mal formada o rango invertido.', type: ApiErrorDto })
+  async reportExcel(
+    @Query() query: SalesReportQueryDto,
+  ): Promise<SalesReportExcelResponseDto> {
+    const output = await this.generateSalesReportExcel.execute(query.from, query.to);
+    return SalesReportExcelResponseDto.fromOutput(output);
+  }
+
+  @Post('report-excel/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de ventas en Excel',
+    description:
+      'Genera el reporte de ventas en Excel (en memoria) y lo adjunta a un correo. ' +
+      '`email` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Correo despachado con el Excel adjunto.', type: SendSalesReportEmailResponseDto })
+  @ApiBadRequestResponse({ description: 'Correo o fechas invalidos.', type: ApiErrorDto })
+  @ApiServiceUnavailableResponse({ description: 'Servidor SMTP no disponible.', type: ApiErrorDto })
+  async sendReportExcelEmail(
+    @Query() query: SendSalesReportEmailQueryDto,
+  ): Promise<SendSalesReportEmailResponseDto> {
+    const output = await this.sendSalesReportExcel.execute(query.email, query.from, query.to);
+    return SendSalesReportEmailResponseDto.fromOutput(output as any);
+  }
+
   // Ruta estatica de dos segmentos: no colisiona con ':saleId'.
   @Get('products-report')
   @HttpCode(HttpStatus.OK)
@@ -286,6 +344,41 @@ export class SalesController {
     return SendProductSalesReportEmailResponseDto.fromOutput(output);
   }
 
+  @Get('products-report-excel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar el reporte de productos vendidos en Excel',
+    description:
+      'Genera el reporte de productos vendidos en un rango de fechas en Excel y lo devuelve ' +
+      'en base64. `from` obligatorio; `to` y `orderBy` opcionales.',
+  })
+  @ApiOkResponse({ description: 'Excel del reporte en base64.', type: ProductSalesReportExcelResponseDto })
+  @ApiBadRequestResponse({ description: 'Fecha mal formada o rango invertido.', type: ApiErrorDto })
+  async productsReportExcel(
+    @Query() query: ProductSalesReportQueryDto,
+  ): Promise<ProductSalesReportExcelResponseDto> {
+    const output = await this.generateProductSalesReportExcel.execute(query.from, query.to, query.orderBy);
+    return ProductSalesReportExcelResponseDto.fromOutput(output);
+  }
+
+  @Post('products-report-excel/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de productos vendidos en Excel',
+    description:
+      'Genera el reporte de productos en Excel (en memoria) y lo adjunta a un correo. ' +
+      '`email` y `from` son obligatorios; `to` y `orderBy` opcionales.',
+  })
+  @ApiOkResponse({ description: 'Correo despachado con el Excel adjunto.', type: SendProductSalesReportEmailResponseDto })
+  @ApiBadRequestResponse({ description: 'Correo o fechas invalidos.', type: ApiErrorDto })
+  @ApiServiceUnavailableResponse({ description: 'Servidor SMTP no disponible.', type: ApiErrorDto })
+  async sendProductsReportExcelEmail(
+    @Query() query: SendProductSalesReportEmailQueryDto,
+  ): Promise<SendProductSalesReportEmailResponseDto> {
+    const output = await this.sendProductSalesReportExcel.execute(query.email, query.from, query.to, query.orderBy);
+    return SendProductSalesReportEmailResponseDto.fromOutput(output as any);
+  }
+
   // --- Reporte de monto de venta de clientes (quienes nos compran) ---
 
   @Get('clients-amount-report')
@@ -349,6 +442,41 @@ export class SalesController {
       query.to,
     );
     return SendClientSalesAmountReportEmailResponseDto.fromOutput(output);
+  }
+
+  @Get('clients-amount-report-excel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar el reporte de monto de venta por cliente en Excel',
+    description:
+      'Genera el reporte de monto por cliente en Excel y lo devuelve en base64. ' +
+      '`from` obligatorio; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Excel del reporte en base64.', type: ClientSalesAmountReportExcelResponseDto })
+  @ApiBadRequestResponse({ description: 'Fecha mal formada o rango invertido.', type: ApiErrorDto })
+  async clientsAmountReportExcel(
+    @Query() query: ClientSalesAmountReportQueryDto,
+  ): Promise<ClientSalesAmountReportExcelResponseDto> {
+    const output = await this.generateClientSalesAmountReportExcel.execute(query.from, query.to);
+    return ClientSalesAmountReportExcelResponseDto.fromOutput(output);
+  }
+
+  @Post('clients-amount-report-excel/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de monto por cliente en Excel',
+    description:
+      'Genera el reporte de monto por cliente en Excel (en memoria) y lo adjunta a un correo. ' +
+      '`email` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Correo despachado con el Excel adjunto.', type: SendClientSalesAmountReportEmailResponseDto })
+  @ApiBadRequestResponse({ description: 'Correo o fechas invalidos.', type: ApiErrorDto })
+  @ApiServiceUnavailableResponse({ description: 'Servidor SMTP no disponible.', type: ApiErrorDto })
+  async sendClientsAmountReportExcelEmail(
+    @Query() query: SendClientSalesAmountReportEmailQueryDto,
+  ): Promise<SendClientSalesAmountReportEmailResponseDto> {
+    const output = await this.sendClientSalesAmountReportExcel.execute(query.email, query.from, query.to);
+    return SendClientSalesAmountReportEmailResponseDto.fromOutput(output as any);
   }
 
   // --- Reporte de ventas por cliente (detalle, filtrable por cliente) ---
@@ -426,6 +554,43 @@ export class SalesController {
       query.to,
     );
     return SendSalesByClientReportEmailResponseDto.fromOutput(output);
+  }
+
+  @Get('sales-by-client-report-excel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar el reporte de ventas de un cliente en Excel',
+    description:
+      'Genera el reporte de ventas de un cliente en Excel y lo devuelve en base64. ' +
+      '`clientId` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Excel del reporte en base64.', type: SalesByClientReportExcelResponseDto })
+  @ApiBadRequestResponse({ description: 'UUID, fecha invalidos o rango invertido.', type: ApiErrorDto })
+  @ApiNotFoundResponse({ description: 'El `clientId` no existe.', type: ApiErrorDto })
+  async salesByClientReportExcel(
+    @Query() query: SalesByClientReportQueryDto,
+  ): Promise<SalesByClientReportExcelResponseDto> {
+    const output = await this.generateSalesByClientReportExcel.execute(query.clientId, query.from, query.to);
+    return SalesByClientReportExcelResponseDto.fromOutput(output);
+  }
+
+  @Post('sales-by-client-report-excel/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de ventas de un cliente en Excel',
+    description:
+      'Genera el reporte de ventas de un cliente en Excel (en memoria) y lo adjunta a un correo. ' +
+      '`email`, `clientId` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Correo despachado con el Excel adjunto.', type: SendSalesByClientReportEmailResponseDto })
+  @ApiBadRequestResponse({ description: 'Correo, UUID o fechas invalidos.', type: ApiErrorDto })
+  @ApiNotFoundResponse({ description: 'El `clientId` no existe.', type: ApiErrorDto })
+  @ApiServiceUnavailableResponse({ description: 'Servidor SMTP no disponible.', type: ApiErrorDto })
+  async sendSalesByClientReportExcelEmail(
+    @Query() query: SendSalesByClientReportEmailQueryDto,
+  ): Promise<SendSalesByClientReportEmailResponseDto> {
+    const output = await this.sendSalesByClientReportExcel.execute(query.email, query.clientId, query.from, query.to);
+    return SendSalesByClientReportEmailResponseDto.fromOutput(output as any);
   }
 
   @Get(':saleId')

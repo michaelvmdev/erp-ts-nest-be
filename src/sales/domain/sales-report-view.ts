@@ -57,3 +57,9 @@ export interface SalesReportPdfRenderer {
 }
 
 export const SALES_REPORT_PDF_RENDERER = Symbol('SalesReportPdfRenderer');
+
+export interface SalesReportExcelRenderer {
+  render(view: SalesReportView): Promise<Buffer>;
+}
+
+export const SALES_REPORT_EXCEL_RENDERER = Symbol('SalesReportExcelRenderer');

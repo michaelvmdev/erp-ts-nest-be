@@ -18,6 +18,14 @@ import { SendSalePdfUseCase } from './application/send-sale-pdf.use-case';
 import { SendSalesByClientReportPdfUseCase } from './application/send-sales-by-client-report-pdf.use-case';
 import { SendSalesReportPdfUseCase } from './application/send-sales-report-pdf.use-case';
 import { UpdateSaleUseCase } from './application/update-sale.use-case';
+import { GenerateSalesReportExcelUseCase } from './application/generate-sales-report-excel.use-case';
+import { SendSalesReportExcelUseCase } from './application/send-sales-report-excel.use-case';
+import { GenerateProductSalesReportExcelUseCase } from './application/generate-product-sales-report-excel.use-case';
+import { SendProductSalesReportExcelUseCase } from './application/send-product-sales-report-excel.use-case';
+import { GenerateClientSalesAmountReportExcelUseCase } from './application/generate-client-sales-amount-report-excel.use-case';
+import { SendClientSalesAmountReportExcelUseCase } from './application/send-client-sales-amount-report-excel.use-case';
+import { GenerateSalesByClientReportExcelUseCase } from './application/generate-sales-by-client-report-excel.use-case';
+import { SendSalesByClientReportExcelUseCase } from './application/send-sales-by-client-report-excel.use-case';
 import { SALE_CATALOG, SALE_REPOSITORY } from './domain/sale.repository';
 import {
   SALE_PDF_RENDERER,
@@ -26,18 +34,22 @@ import {
 import {
   CLIENT_SALES_AMOUNT_REPORT_PDF_RENDERER,
   CLIENT_SALES_AMOUNT_REPORT_READER,
+  CLIENT_SALES_AMOUNT_REPORT_EXCEL_RENDERER,
 } from './domain/client-sales-amount-report-view';
 import {
   PRODUCT_SALES_REPORT_PDF_RENDERER,
   PRODUCT_SALES_REPORT_READER,
+  PRODUCT_SALES_REPORT_EXCEL_RENDERER,
 } from './domain/product-sales-report-view';
 import {
   SALES_BY_CLIENT_REPORT_PDF_RENDERER,
   SALES_BY_CLIENT_REPORT_READER,
+  SALES_BY_CLIENT_REPORT_EXCEL_RENDERER,
 } from './domain/sales-by-client-report-view';
 import {
   SALES_REPORT_PDF_RENDERER,
   SALES_REPORT_READER,
+  SALES_REPORT_EXCEL_RENDERER,
 } from './domain/sales-report-view';
 import { SalesController } from './infrastructure/http/sales.controller';
 import { ClientSalesAmountReportPdfGenerator } from './infrastructure/pdf/client-sales-amount-report-pdf.generator';
@@ -45,6 +57,10 @@ import { ProductSalesReportPdfGenerator } from './infrastructure/pdf/product-sal
 import { SalePdfGenerator } from './infrastructure/pdf/sale-pdf.generator';
 import { SalesByClientReportPdfGenerator } from './infrastructure/pdf/sales-by-client-report-pdf.generator';
 import { SalesReportPdfGenerator } from './infrastructure/pdf/sales-report-pdf.generator';
+import { SalesReportExcelGenerator } from './infrastructure/excel/sales-report-excel.generator';
+import { ProductSalesReportExcelGenerator } from './infrastructure/excel/product-sales-report-excel.generator';
+import { ClientSalesAmountReportExcelGenerator } from './infrastructure/excel/client-sales-amount-report-excel.generator';
+import { SalesByClientReportExcelGenerator } from './infrastructure/excel/sales-by-client-report-excel.generator';
 import {
   SaleDetailOrmEntity,
   SaleOrmEntity,
@@ -126,6 +142,15 @@ import { TypeOrmSaleRepository } from './infrastructure/persistence/typeorm-sale
       provide: SALES_BY_CLIENT_REPORT_PDF_RENDERER,
       useExisting: SalesByClientReportPdfGenerator,
     },
+    // Excel generators
+    SalesReportExcelGenerator,
+    { provide: SALES_REPORT_EXCEL_RENDERER, useExisting: SalesReportExcelGenerator },
+    ProductSalesReportExcelGenerator,
+    { provide: PRODUCT_SALES_REPORT_EXCEL_RENDERER, useExisting: ProductSalesReportExcelGenerator },
+    ClientSalesAmountReportExcelGenerator,
+    { provide: CLIENT_SALES_AMOUNT_REPORT_EXCEL_RENDERER, useExisting: ClientSalesAmountReportExcelGenerator },
+    SalesByClientReportExcelGenerator,
+    { provide: SALES_BY_CLIENT_REPORT_EXCEL_RENDERER, useExisting: SalesByClientReportExcelGenerator },
     FindSaleUseCase,
     SearchSalesUseCase,
     CreateSaleUseCase,
@@ -140,6 +165,14 @@ import { TypeOrmSaleRepository } from './infrastructure/persistence/typeorm-sale
     SendProductSalesReportPdfUseCase,
     SendClientSalesAmountReportPdfUseCase,
     SendSalesByClientReportPdfUseCase,
+    GenerateSalesReportExcelUseCase,
+    SendSalesReportExcelUseCase,
+    GenerateProductSalesReportExcelUseCase,
+    SendProductSalesReportExcelUseCase,
+    GenerateClientSalesAmountReportExcelUseCase,
+    SendClientSalesAmountReportExcelUseCase,
+    GenerateSalesByClientReportExcelUseCase,
+    SendSalesByClientReportExcelUseCase,
   ],
 })
 export class SalesModule {}

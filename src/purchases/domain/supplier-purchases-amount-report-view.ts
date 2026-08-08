@@ -44,3 +44,11 @@ export interface SupplierPurchasesAmountReportPdfRenderer {
 export const SUPPLIER_PURCHASES_AMOUNT_REPORT_PDF_RENDERER = Symbol(
   'SupplierPurchasesAmountReportPdfRenderer',
 );
+
+export interface SupplierPurchasesAmountReportExcelRenderer {
+  render(view: SupplierPurchasesAmountReportView): Promise<Buffer>;
+}
+
+export const SUPPLIER_PURCHASES_AMOUNT_REPORT_EXCEL_RENDERER = Symbol(
+  'SupplierPurchasesAmountReportExcelRenderer',
+);

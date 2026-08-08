@@ -30,6 +30,10 @@ import { SearchPurchasesUseCase } from '../../application/search-purchases.use-c
 import { SendPurchasesBySupplierReportPdfUseCase } from '../../application/send-purchases-by-supplier-report-pdf.use-case';
 import { SendSupplierPurchasesAmountReportPdfUseCase } from '../../application/send-supplier-purchases-amount-report-pdf.use-case';
 import { UpdatePurchaseUseCase } from '../../application/update-purchase.use-case';
+import { GenerateSupplierPurchasesAmountReportExcelUseCase } from '../../application/generate-supplier-purchases-amount-report-excel.use-case';
+import { SendSupplierPurchasesAmountReportExcelUseCase } from '../../application/send-supplier-purchases-amount-report-excel.use-case';
+import { GeneratePurchasesBySupplierReportExcelUseCase } from '../../application/generate-purchases-by-supplier-report-excel.use-case';
+import { SendPurchasesBySupplierReportExcelUseCase } from '../../application/send-purchases-by-supplier-report-excel.use-case';
 import { CreatePurchaseRequestDto } from './dto/create-purchase.request.dto';
 import { PurchasesBySupplierReportPdfResponseDto } from './dto/purchases-by-supplier-report-pdf.response.dto';
 import { PurchasesBySupplierReportQueryDto } from './dto/purchases-by-supplier-report.query.dto';
@@ -46,6 +50,8 @@ import { SendSuppliersAmountReportEmailResponseDto } from './dto/send-suppliers-
 import { SuppliersAmountReportPdfResponseDto } from './dto/suppliers-amount-report-pdf.response.dto';
 import { SuppliersAmountReportQueryDto } from './dto/suppliers-amount-report.query.dto';
 import { UpdatePurchaseRequestDto } from './dto/update-purchase.request.dto';
+import { SuppliersAmountReportExcelResponseDto } from './dto/suppliers-amount-report-excel.response.dto';
+import { PurchasesBySupplierReportExcelResponseDto } from './dto/purchases-by-supplier-report-excel.response.dto';
 
 const UUID_EJEMPLO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 
@@ -61,6 +67,10 @@ export class PurchasesController {
     private readonly generatePurchasesBySupplierReportPdf: GeneratePurchasesBySupplierReportPdfUseCase,
     private readonly sendSuppliersAmountReportPdf: SendSupplierPurchasesAmountReportPdfUseCase,
     private readonly sendPurchasesBySupplierReportPdf: SendPurchasesBySupplierReportPdfUseCase,
+    private readonly generateSuppliersAmountReportExcel: GenerateSupplierPurchasesAmountReportExcelUseCase,
+    private readonly sendSuppliersAmountReportExcel: SendSupplierPurchasesAmountReportExcelUseCase,
+    private readonly generatePurchasesBySupplierReportExcel: GeneratePurchasesBySupplierReportExcelUseCase,
+    private readonly sendPurchasesBySupplierReportExcel: SendPurchasesBySupplierReportExcelUseCase,
   ) {}
 
   // --- Reporte de monto de compras por proveedor ---
@@ -126,6 +136,41 @@ export class PurchasesController {
       query.to,
     );
     return SendSuppliersAmountReportEmailResponseDto.fromOutput(output);
+  }
+
+  @Get('suppliers-amount-report-excel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar el reporte de monto de compra por proveedor en Excel',
+    description:
+      'Genera el reporte de monto por proveedor en Excel y lo devuelve en base64. ' +
+      '`from` es obligatorio; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Excel del reporte en base64.', type: SuppliersAmountReportExcelResponseDto })
+  @ApiBadRequestResponse({ description: 'Fecha mal formada o rango invertido.', type: ApiErrorDto })
+  async suppliersAmountReportExcel(
+    @Query() query: SuppliersAmountReportQueryDto,
+  ): Promise<SuppliersAmountReportExcelResponseDto> {
+    const output = await this.generateSuppliersAmountReportExcel.execute(query.from, query.to);
+    return SuppliersAmountReportExcelResponseDto.fromOutput(output);
+  }
+
+  @Post('suppliers-amount-report-excel/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de monto por proveedor en Excel',
+    description:
+      'Genera el reporte de monto por proveedor en Excel (en memoria) y lo adjunta a un correo. ' +
+      '`email` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Correo despachado con el Excel adjunto.', type: SendSuppliersAmountReportEmailResponseDto })
+  @ApiBadRequestResponse({ description: 'Correo o fechas invalidos.', type: ApiErrorDto })
+  @ApiServiceUnavailableResponse({ description: 'Servidor SMTP no disponible.', type: ApiErrorDto })
+  async sendSuppliersAmountReportExcelEmail(
+    @Query() query: SendSuppliersAmountReportEmailQueryDto,
+  ): Promise<SendSuppliersAmountReportEmailResponseDto> {
+    const output = await this.sendSuppliersAmountReportExcel.execute(query.email, query.from, query.to);
+    return SendSuppliersAmountReportEmailResponseDto.fromOutput(output as any);
   }
 
   // --- Reporte de compras por proveedor (detalle de un proveedor concreto) ---
@@ -203,6 +248,43 @@ export class PurchasesController {
       query.to,
     );
     return SendPurchasesBySupplierReportEmailResponseDto.fromOutput(output);
+  }
+
+  @Get('purchases-by-supplier-report-excel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar el reporte de compras de un proveedor en Excel',
+    description:
+      'Genera el reporte de compras de un proveedor en Excel y lo devuelve en base64. ' +
+      '`supplierId` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Excel del reporte en base64.', type: PurchasesBySupplierReportExcelResponseDto })
+  @ApiBadRequestResponse({ description: 'UUID, fecha invalidos o rango invertido.', type: ApiErrorDto })
+  @ApiNotFoundResponse({ description: 'El `supplierId` no existe.', type: ApiErrorDto })
+  async purchasesBySupplierReportExcel(
+    @Query() query: PurchasesBySupplierReportQueryDto,
+  ): Promise<PurchasesBySupplierReportExcelResponseDto> {
+    const output = await this.generatePurchasesBySupplierReportExcel.execute(query.supplierId, query.from, query.to);
+    return PurchasesBySupplierReportExcelResponseDto.fromOutput(output);
+  }
+
+  @Post('purchases-by-supplier-report-excel/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar por correo el reporte de compras de un proveedor en Excel',
+    description:
+      'Genera el reporte de compras de un proveedor en Excel (en memoria) y lo adjunta a un correo. ' +
+      '`email`, `supplierId` y `from` son obligatorios; `to` opcional.',
+  })
+  @ApiOkResponse({ description: 'Correo despachado con el Excel adjunto.', type: SendPurchasesBySupplierReportEmailResponseDto })
+  @ApiBadRequestResponse({ description: 'Correo, UUID o fechas invalidos.', type: ApiErrorDto })
+  @ApiNotFoundResponse({ description: 'El `supplierId` no existe.', type: ApiErrorDto })
+  @ApiServiceUnavailableResponse({ description: 'Servidor SMTP no disponible.', type: ApiErrorDto })
+  async sendPurchasesBySupplierReportExcelEmail(
+    @Query() query: SendPurchasesBySupplierReportEmailQueryDto,
+  ): Promise<SendPurchasesBySupplierReportEmailResponseDto> {
+    const output = await this.sendPurchasesBySupplierReportExcel.execute(query.email, query.supplierId, query.from, query.to);
+    return SendPurchasesBySupplierReportEmailResponseDto.fromOutput(output as any);
   }
 
   // La ruta sin parametro va antes que ':purchaseId' para que no se interprete
