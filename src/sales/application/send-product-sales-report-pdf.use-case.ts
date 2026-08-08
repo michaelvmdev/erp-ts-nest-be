@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { buildEmailHtml, LOGO_CID } from '../../mail/email-template';
+import type { EmailSummaryItem } from '../../mail/email-template';
 import { MAILER } from '../../mail/mailer.port';
 import type { Mailer } from '../../mail/mailer.port';
+import { brandLogoPng } from '../../shared/infrastructure/assets';
 import {
   PRODUCT_SALES_REPORT_PDF_RENDERER,
   PRODUCT_SALES_REPORT_READER,
@@ -29,12 +32,6 @@ export class SendProductSalesReportPdfUseCase {
     private readonly mailer: Mailer,
   ) {}
 
-  /**
-   * `dateTo` es opcional: si se omite, el reporte —y el correo— son del dia
-   * `dateFrom`. Las fechas llegan validadas como YYYY-MM-DD desde el DTO, asi que
-   * la comparacion de cadenas equivale a comparar fechas. `orderBy` por defecto
-   * es por monto.
-   */
   async execute(
     email: string,
     dateFrom: string,
@@ -47,17 +44,35 @@ export class SendProductSalesReportPdfUseCase {
     }
 
     const view = await this.reader.byDateRange(dateFrom, to, orderBy);
-
-    // El PDF se genera en memoria y se adjunta tal cual: nunca toca el disco.
     const pdf = await this.renderer.render(view);
+    const logo = brandLogoPng();
+
     const fileName = view.singleDay
       ? `productos-vendidos-${view.dateFrom}.pdf`
       : `productos-vendidos-${view.dateFrom}_${view.dateTo}.pdf`;
 
     const periodo = view.singleDay
-      ? `del dia ${view.dateFrom}`
+      ? `del día ${view.dateFrom}`
       : `entre las fechas ${view.dateFrom} y ${view.dateTo}`;
+
     const orden = view.orderBy === 'amount' ? 'monto' : 'cantidad';
+    const { productCount, quantity, total } = view.totals;
+
+    const summaryItems: EmailSummaryItem[] = [
+      { label: 'Productos', value: `${productCount}` },
+      { label: 'Unidades', value: `${quantity}` },
+      { label: 'Total', value: `S/ ${total}` },
+      { label: 'Ordenado por', value: orden },
+    ];
+
+    const html = buildEmailHtml({
+      greeting: 'Hola,',
+      paragraphs: [
+        `Adjuntamos el reporte de productos vendidos ${periodo} en PDF, ordenado por ${orden}.`,
+      ],
+      summaryItems,
+      showLogo: logo !== null,
+    });
 
     const result = await this.mailer.send({
       to: email,
@@ -65,11 +80,15 @@ export class SendProductSalesReportPdfUseCase {
       text:
         `Hola,\n\n` +
         `Adjuntamos el reporte de productos vendidos ${periodo} en PDF, ordenado por ${orden}.\n\n` +
-        `Resumen: ${view.totals.productCount} producto${view.totals.productCount === 1 ? '' : 's'}, ` +
-        `${view.totals.quantity} unidades, total S/ ${view.totals.total}.\n\n` +
-        'Michael Dev S.A.C.\nEnviado con AppSales',
+        `Resumen: ${productCount} producto${productCount === 1 ? '' : 's'}, ` +
+        `${quantity} unidades, total S/ ${total}.\n\n` +
+        'Michael Dev S.A.C.',
+      html,
       attachments: [
         { filename: fileName, content: pdf, contentType: 'application/pdf' },
+        ...(logo
+          ? [{ filename: 'logo.png', content: logo, contentType: 'image/png', cid: LOGO_CID }]
+          : []),
       ],
     });
 

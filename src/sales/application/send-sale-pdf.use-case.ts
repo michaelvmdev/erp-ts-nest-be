@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { buildEmailHtml, LOGO_CID } from '../../mail/email-template';
+import type { EmailSummaryItem } from '../../mail/email-template';
 import { MAILER } from '../../mail/mailer.port';
 import type { Mailer } from '../../mail/mailer.port';
+import { brandLogoPng } from '../../shared/infrastructure/assets';
 import { SaleNotFoundError } from '../domain/sale.errors';
 import {
   SALE_PDF_RENDERER,
@@ -34,9 +37,24 @@ export class SendSalePdfUseCase {
       throw new SaleNotFoundError(rawSaleId);
     }
 
-    // El PDF se genera en memoria y se adjunta tal cual: nunca toca el disco.
     const pdf = await this.renderer.render(view);
     const fileName = `${view.saleNumber}.pdf`;
+    const logo = brandLogoPng();
+
+    const summaryItems: EmailSummaryItem[] = [
+      { label: 'Comprobante', value: view.saleNumber },
+      { label: 'Total', value: `S/ ${view.total}` },
+    ];
+
+    const html = buildEmailHtml({
+      greeting: `Hola ${view.client.description},`,
+      paragraphs: [
+        `Adjuntamos tu comprobante ${view.saleNumber} por un total de S/ ${view.total}.`,
+        'Puedes encontrar el documento en PDF adjunto a este correo.',
+      ],
+      summaryItems,
+      showLogo: logo !== null,
+    });
 
     const result = await this.mailer.send({
       to: email,
@@ -44,9 +62,13 @@ export class SendSalePdfUseCase {
       text:
         `Hola ${view.client.description},\n\n` +
         `Adjuntamos tu comprobante ${view.saleNumber} por un total de S/ ${view.total}.\n\n` +
-        'Gracias por tu compra.\nMichael Dev S.A.C.\nEnviado con AppSales',
+        'Gracias por tu compra.\nMichael Dev S.A.C.',
+      html,
       attachments: [
         { filename: fileName, content: pdf, contentType: 'application/pdf' },
+        ...(logo
+          ? [{ filename: 'logo.png', content: logo, contentType: 'image/png', cid: LOGO_CID }]
+          : []),
       ],
     });
 

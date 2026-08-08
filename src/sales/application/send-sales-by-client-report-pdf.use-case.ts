@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { buildEmailHtml, LOGO_CID } from '../../mail/email-template';
+import type { EmailSummaryItem } from '../../mail/email-template';
 import { MAILER } from '../../mail/mailer.port';
 import type { Mailer } from '../../mail/mailer.port';
+import { brandLogoPng } from '../../shared/infrastructure/assets';
 import { InvalidSalesReportRangeError } from '../domain/sale.errors';
 import {
   SALES_BY_CLIENT_REPORT_PDF_RENDERER,
@@ -40,15 +43,33 @@ export class SendSalesByClientReportPdfUseCase {
     }
 
     const view = await this.reader.byDateRange(clientId, dateFrom, to);
-
     const pdf = await this.renderer.render(view);
+    const logo = brandLogoPng();
+
     const fileName = view.singleDay
       ? `ventas-cliente-${view.dateFrom}.pdf`
       : `ventas-cliente-${view.dateFrom}_${view.dateTo}.pdf`;
 
     const periodo = view.singleDay
-      ? `del dia ${view.dateFrom}`
+      ? `del día ${view.dateFrom}`
       : `entre las fechas ${view.dateFrom} y ${view.dateTo}`;
+
+    const { count, amount } = view.totals;
+
+    const summaryItems: EmailSummaryItem[] = [
+      { label: 'Cliente', value: view.clientDescription },
+      { label: 'Ventas', value: `${count}` },
+      { label: 'Total', value: `S/ ${amount}` },
+    ];
+
+    const html = buildEmailHtml({
+      greeting: 'Hola,',
+      paragraphs: [
+        `Adjuntamos el reporte de ventas del cliente ${view.clientDescription} ${periodo} en PDF.`,
+      ],
+      summaryItems,
+      showLogo: logo !== null,
+    });
 
     const result = await this.mailer.send({
       to: email,
@@ -56,11 +77,14 @@ export class SendSalesByClientReportPdfUseCase {
       text:
         `Hola,\n\n` +
         `Adjuntamos el reporte de ventas del cliente ${view.clientDescription} ${periodo} en PDF.\n\n` +
-        `Resumen: ${view.totals.count} venta${view.totals.count === 1 ? '' : 's'}, ` +
-        `total S/ ${view.totals.amount}.\n\n` +
-        'Michael Dev S.A.C.\nEnviado con AppSales',
+        `Resumen: ${count} venta${count === 1 ? '' : 's'}, total S/ ${amount}.\n\n` +
+        'Michael Dev S.A.C.',
+      html,
       attachments: [
         { filename: fileName, content: pdf, contentType: 'application/pdf' },
+        ...(logo
+          ? [{ filename: 'logo.png', content: logo, contentType: 'image/png', cid: LOGO_CID }]
+          : []),
       ],
     });
 

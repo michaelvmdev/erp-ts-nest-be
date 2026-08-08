@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { buildEmailHtml, LOGO_CID } from '../../mail/email-template';
+import type { EmailSummaryItem } from '../../mail/email-template';
 import { MAILER } from '../../mail/mailer.port';
 import type { Mailer } from '../../mail/mailer.port';
+import { brandLogoPng } from '../../shared/infrastructure/assets';
 import { InvalidSalesReportRangeError } from '../domain/sale.errors';
 import {
   SALES_REPORT_PDF_RENDERER,
@@ -28,11 +31,6 @@ export class SendSalesReportPdfUseCase {
     private readonly mailer: Mailer,
   ) {}
 
-  /**
-   * `dateTo` es opcional: si se omite, el reporte —y el correo— son del dia
-   * `dateFrom`. Las fechas llegan validadas como YYYY-MM-DD desde el DTO, asi que
-   * la comparacion de cadenas equivale a comparar fechas.
-   */
   async execute(
     email: string,
     dateFrom: string,
@@ -44,16 +42,29 @@ export class SendSalesReportPdfUseCase {
     }
 
     const view = await this.reader.byDateRange(dateFrom, to);
-
-    // El PDF se genera en memoria y se adjunta tal cual: nunca toca el disco.
     const pdf = await this.renderer.render(view);
+    const logo = brandLogoPng();
+
     const fileName = view.singleDay
       ? `ventas-${view.dateFrom}.pdf`
       : `ventas-${view.dateFrom}_${view.dateTo}.pdf`;
 
     const periodo = view.singleDay
-      ? `del dia ${view.dateFrom}`
+      ? `del día ${view.dateFrom}`
       : `del ${view.dateFrom} al ${view.dateTo}`;
+
+    const count = view.totals.count;
+    const summaryItems: EmailSummaryItem[] = [
+      { label: 'Comprobantes', value: `${count}` },
+      { label: 'Total', value: `S/ ${view.totals.total}` },
+    ];
+
+    const html = buildEmailHtml({
+      greeting: 'Hola,',
+      paragraphs: [`Adjuntamos el reporte de ventas ${periodo} en PDF.`],
+      summaryItems,
+      showLogo: logo !== null,
+    });
 
     const result = await this.mailer.send({
       to: email,
@@ -61,11 +72,14 @@ export class SendSalesReportPdfUseCase {
       text:
         `Hola,\n\n` +
         `Adjuntamos el reporte de ventas ${periodo} en PDF.\n\n` +
-        `Resumen: ${view.totals.count} comprobante${view.totals.count === 1 ? '' : 's'}, ` +
-        `total S/ ${view.totals.total}.\n\n` +
-        'Michael Dev S.A.C.\nEnviado con AppSales',
+        `Resumen: ${count} comprobante${count === 1 ? '' : 's'}, total S/ ${view.totals.total}.\n\n` +
+        'Michael Dev S.A.C.',
+      html,
       attachments: [
         { filename: fileName, content: pdf, contentType: 'application/pdf' },
+        ...(logo
+          ? [{ filename: 'logo.png', content: logo, contentType: 'image/png', cid: LOGO_CID }]
+          : []),
       ],
     });
 

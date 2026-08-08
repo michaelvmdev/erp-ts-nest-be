@@ -12,6 +12,8 @@ export interface MailAttachment {
   /** Contenido binario en memoria; nunca se escribe a disco. */
   content: Buffer;
   contentType: string;
+  /** Content-ID para imágenes incrustadas en el HTML (cid:xxx). */
+  cid?: string;
 }
 
 export interface SendMailInput {

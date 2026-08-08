@@ -45,6 +45,7 @@ export class NodemailerMailer implements Mailer {
           filename: a.filename,
           content: a.content,
           contentType: a.contentType,
+          cid: a.cid,
         })),
       })) as { messageId?: string; accepted?: unknown };
 
