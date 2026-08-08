@@ -20,6 +20,7 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { UbigeoModule } from './ubigeo/ubigeo.module';
 import { UnitsModule } from './units/units.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
+import { PriceListsModule } from './price-lists/price-lists.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { WarehousesModule } from './warehouses/warehouses.module';
     BrandsModule,
     UnitsModule,
     WarehousesModule,
+    PriceListsModule,
     CategoriesModule,
     ProductsModule,
     PurchasesModule,
