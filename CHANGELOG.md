@@ -9,6 +9,75 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 ### Añadido
 
+#### Backend — Módulo de autenticación, usuarios y roles
+
+- **Auth** (`/auth`): `POST /auth/register` crea un usuario (email, contraseña,
+  nombre, roleId); `POST /auth/login` devuelve un JWT con payload
+  `{ sub: userId, email, roleId }`; `GET /auth/me` devuelve el usuario
+  autenticado actual (requiere token).
+- **Usuarios** (`/users`): `GET /users` listado paginado; `PATCH /users/:id`
+  actualiza nombre, rol y estado activo. El email y la contraseña nunca se
+  modifican por esta ruta.
+- **Roles** (`/roles`): `GET /roles` devuelve el catálogo completo como arreglo
+  plano (sin paginado). De solo lectura vía API.
+- Autenticación con `@nestjs/jwt` + `bcryptjs` (pure JS, sin compilación nativa).
+- `JwtGuard` extrae el Bearer token del encabezado y adjunta el payload
+  verificado como `request.user` en todos los controladores protegidos.
+- Tablas `roles` (`role_id`, `role_name`, `role_description`) y `users`
+  (`user_id`, `role_id FK`, `user_email UNIQUE`, `user_name`, `password_hash`,
+  `user_active DEFAULT true`, `created_at`).
+- Nuevas variables de entorno: `JWT_SECRET` (obligatoria) y `JWT_EXPIRES_IN`
+  (por defecto `7d`).
+- Errores nuevos: `INVALID_CREDENTIALS` (401), `USER_NOT_FOUND` (404),
+  `USER_EMAIL_CONFLICT` (409).
+- Nuevos paquetes: `@nestjs/jwt`, `bcryptjs`; dev: `@types/bcryptjs`.
+
+#### Backend — Módulo de pagos
+
+- **Pagos** (`/payments`): `POST /payments` registra un pago polimórfico con
+  `referenceType` + `referenceId` (apunta a `sale`, `purchase`, `credit_note`
+  o `purchase_order`), `amount`, `method` (`cash` | `card` | `transfer` |
+  `other`) y `type` (`income` | `expense`).
+- `GET /payments` listado paginado con filtros por `referenceType`,
+  `referenceId`, `method` y `type`.
+- `DELETE /payments/:id` elimina un pago y responde 204 sin cuerpo.
+- Error nuevo: `PAYMENT_NOT_FOUND` (404), `INVALID_PAYMENT` (400).
+- Tabla `payments` con las columnas correspondientes.
+
+#### Backend — Módulo de órdenes de compra
+
+- **Órdenes de compra** (`/purchase-orders`): `GET` lista, `GET` uno, `POST`
+  crea, `PATCH` actualiza.
+- Máquina de estados: `pending` → `partial` | `received` | `cancelled`;
+  `partial` → `received` | `cancelled`; `received` y `cancelled` son terminales.
+  Intentar una transición inválida responde 409 `INVALID_PURCHASE_ORDER`.
+- `POST` recibe `supplierId` e `items[]` con `productId`, `quantity` y
+  `unitPrice`.
+- Errores nuevos: `PURCHASE_ORDER_NOT_FOUND` (404), `INVALID_PURCHASE_ORDER`
+  (409 para estado terminal o transición inválida).
+
+#### Backend — Módulo de notas de crédito
+
+- **Notas de crédito** (`/credit-notes`): `GET` lista paginada, `GET` una,
+  `POST` emite.
+- El correlativo se asigna desde la secuencia PostgreSQL
+  `seq_credit_note_number` con formato `NCA-XXXXXXXXXX`.
+- El `unitPrice` de cada línea se toma de `sale_details` de la venta original;
+  el cliente solo envía `saleId` e `items[]` con `saleDetailId` y `quantity`.
+- Errores nuevos: `CREDIT_NOTE_NOT_FOUND` (404), `INVALID_CREDIT_NOTE` (400).
+
+#### Backend — Módulo de stock
+
+- **Stock** (`/stock`): `GET /stock` devuelve niveles actuales por almacén y
+  producto (filtros: `warehouseId`, `productId`). `GET /stock/movements`
+  devuelve el historial paginado de movimientos (filtros: `warehouseId`,
+  `productId`, `movementType`).
+- Los movimientos se generan automáticamente al crear una venta con
+  `warehouseId` (tipo `sale_out`, cantidad negativa por línea) o una compra
+  (tipo `purchase_in`, cantidad positiva por línea).
+- Tabla `stock_movements` con `product_id`, `warehouse_id`, `movement_type`,
+  `quantity` y `reference_id`.
+
 #### Backend — Reportes en PDF de compras a proveedores
 
 - `GET /purchases/suppliers-amount-report?from&to` — PDF con IGV y monto de
@@ -317,8 +386,6 @@ Decisiones tomadas al convertir el borrador inicial a PostgreSQL:
 
 ### Pendiente
 
-- Notas de crédito, que es la vía correcta para anular o corregir una venta ya
-  emitida.
 - Las URLs de `product_image` quedan como cadena vacía.
 - Los nombres de distrito están sin tildes: la fuente del padrón no las trae.
 - Evaluar unificar `sale_date` y `sale_hour` en un solo `timestamptz`.

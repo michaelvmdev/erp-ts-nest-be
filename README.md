@@ -249,6 +249,13 @@ compuestas, así que un cliente que enviara los tres podría mandar un distrito 
 Cusco con el departamento de Lima; derivarlos hace que esa combinación no pueda
 existir.
 
+#### `warehouseId` opcional
+
+`POST /sales` acepta un campo opcional `warehouseId` (UUID). Si se envía, el backend
+registra automáticamente un movimiento `sale_out` en `stock_movements` con
+cantidad negativa para cada línea de la venta. Si se omite, la venta se guarda
+normalmente sin afectar el stock.
+
 #### PDF y envío por correo
 
 | Método | Ruta | Descripción |
@@ -619,16 +626,188 @@ siempre presentes, con `"0.00"` o `null` en los meses sin compras):
 | `GET` | `/dashboard/top-purchased-product-by-month?year=2026` | Producto más comprado de cada mes |
 | `GET` | `/dashboard/yearly-purchases` | Totales de compra agrupados por año (serie histórica) |
 
+### Stock
+
+Solo lectura. El stock se actualiza automáticamente al crear una venta con
+`warehouseId` (movimiento `sale_out`) o una compra (movimiento `purchase_in`).
+Requiere autenticación JWT (`Authorization: Bearer <token>`).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/stock` | Niveles de stock actuales por almacén y producto |
+| `GET` | `/stock/movements` | Historial de movimientos (paginado) |
+
+`GET /stock` acepta `warehouseId` (UUID, opcional) y `productId` (UUID,
+opcional) como query params. Responde un arreglo de objetos
+`{ productId, productDescription, warehouseId, warehouseName, quantity }`.
+
+`GET /stock/movements` acepta `warehouseId`, `productId`, `movementType`
+(`purchase_in` | `sale_out`), `page` y `limit`. Responde en el formato
+paginado estándar con `{ items, meta }`.
+
+### Notas de crédito
+
+Corrección de ventas. El correlativo es `NCA-XXXXXXXXXX`, emitido desde la
+secuencia PostgreSQL `seq_credit_note_number`. El `unitPrice` de cada línea se
+toma directamente de la venta original (`sale_details`) — el cliente no lo
+envía. Requiere autenticación JWT.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/credit-notes` | Listado paginado con filtros |
+| `GET` | `/credit-notes/{creditNoteId}` | Consulta una nota de crédito |
+| `POST` | `/credit-notes` | Emite una nueva nota de crédito |
+
+Cuerpo de `POST /credit-notes`:
+
+```json
+{
+  "saleId": "UUID de la venta a corregir",
+  "items": [
+    { "saleDetailId": "UUID de la línea de la venta", "quantity": 2 }
+  ]
+}
+```
+
+### Órdenes de compra
+
+Gestión de pedidos a proveedores con máquina de estados. Requiere
+autenticación JWT.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/purchase-orders` | Listado paginado con filtros |
+| `GET` | `/purchase-orders/{purchaseOrderId}` | Consulta una orden de compra |
+| `POST` | `/purchase-orders` | Crea una orden de compra |
+| `PATCH` | `/purchase-orders/{purchaseOrderId}` | Actualiza estado o datos |
+
+Transiciones de estado permitidas:
+
+| Estado actual | Transiciones posibles |
+|---|---|
+| `pending` | `partial`, `received`, `cancelled` |
+| `partial` | `received`, `cancelled` |
+| `received` | — (terminal) |
+| `cancelled` | — (terminal) |
+
+Cuerpo de `POST /purchase-orders`:
+
+```json
+{
+  "supplierId": "UUID",
+  "items": [
+    { "productId": "UUID", "quantity": 10, "unitPrice": 150.00 }
+  ]
+}
+```
+
+`PATCH` acepta `status` y, opcionalmente, los mismos campos del `POST`. Si la
+orden ya está en estado terminal (`received` o `cancelled`), el backend
+responde 409 `INVALID_PURCHASE_ORDER`.
+
+### Pagos
+
+Registro polimórfico de pagos. Un pago puede estar asociado a una venta, una
+compra, una nota de crédito o una orden de compra, indicado con
+`referenceType` + `referenceId`. Requiere autenticación JWT.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/payments` | Registra un pago |
+| `GET` | `/payments` | Listado paginado con filtros |
+| `DELETE` | `/payments/{paymentId}` | Elimina un pago (204 sin cuerpo) |
+
+Cuerpo de `POST /payments`:
+
+```json
+{
+  "referenceType": "sale",
+  "referenceId": "UUID de la venta",
+  "amount": 500.00,
+  "method": "cash",
+  "type": "income",
+  "notes": "Pago inicial"
+}
+```
+
+`referenceType` puede ser `sale`, `purchase`, `credit_note` o
+`purchase_order`. `method` puede ser `cash`, `card`, `transfer` u `other`.
+`type` puede ser `income` o `expense`.
+
+`GET /payments` acepta `referenceType`, `referenceId`, `method`, `type`,
+`page` y `limit` como query params.
+
+`DELETE /payments/{paymentId}` responde 204 sin cuerpo si tiene éxito, o 404
+`PAYMENT_NOT_FOUND` si el pago no existe.
+
+### Autenticación y usuarios
+
+Autenticación basada en JWT. El token de acceso se obtiene en `POST
+/auth/login` y debe enviarse como `Authorization: Bearer <token>` en los
+endpoints protegidos (marcados con 🔒). Los endpoints de esta sección marcados
+con 🔒 también requieren el token.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/auth/register` | Registra un nuevo usuario |
+| `POST` | `/auth/login` | Inicia sesión y devuelve el JWT |
+| `GET` | `/auth/me` 🔒 | Devuelve el usuario autenticado actual |
+| `GET` | `/users` 🔒 | Listado paginado de usuarios |
+| `PATCH` | `/users/{userId}` 🔒 | Actualiza nombre, rol o estado activo |
+| `GET` | `/roles` 🔒 | Listado completo de roles (arreglo plano, sin paginado) |
+
+Cuerpo de `POST /auth/register`:
+
+```json
+{
+  "email": "usuario@ejemplo.com",
+  "password": "contraseña",
+  "name": "Nombre Apellido",
+  "roleId": "UUID del rol"
+}
+```
+
+Cuerpo de `POST /auth/login`:
+
+```json
+{
+  "email": "usuario@ejemplo.com",
+  "password": "contraseña"
+}
+```
+
+Respuesta de `POST /auth/login`:
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+  "userId": "UUID",
+  "email": "usuario@ejemplo.com",
+  "roleId": "UUID"
+}
+```
+
+El payload del JWT contiene `{ sub: userId, email, roleId }`. El token expira
+según `JWT_EXPIRES_IN` (por defecto `7d`).
+
+`PATCH /users/{userId}` acepta `name`, `roleId` y `active`. No permite cambiar
+el email ni la contraseña.
+
+Si las credenciales son incorrectas o el usuario está inactivo, `POST
+/auth/login` responde 401 `INVALID_CREDENTIALS`. Si se intenta registrar un
+email ya existente, `POST /auth/register` responde 409 `USER_EMAIL_CONFLICT`.
+
 ## Respuestas
 
 | Código | Cuándo |
 |---|---|
 | `200` | Consulta resuelta, o modificación aplicada |
-| `201` | Recurso creado (producto, marca, categoría, cliente, proveedor, venta o compra) |
-| `204` | Producto, marca, categoría, cliente o proveedor eliminados. Sin cuerpo |
+| `201` | Recurso creado (producto, marca, categoría, cliente, proveedor, usuario, venta, compra, nota de crédito, orden de compra o pago) |
+| `204` | Recurso eliminado. Sin cuerpo (baja física de productos, marcas, categorías, clientes, proveedores; eliminación de pagos) |
 | `400` | Validación del cuerpo, UUID mal formado, rango de precio invertido, documento inválido |
+| `401` | Sin token o token inválido (`INVALID_CREDENTIALS` en login, sin token en rutas protegidas) |
 | `404` | El recurso solicitado no existe |
-| `409` | Conflicto: duplicado, recurso en uso, cliente o producto inactivo, serie agotada |
+| `409` | Conflicto: duplicado, recurso en uso, cliente o producto inactivo, serie agotada, estado de orden inválido |
 | `422` | Error de dominio que no entra en las categorías anteriores |
 | `429` | Se superó el límite de peticiones (rate-limiting) |
 | `503` | `GET /health/db` cuando la base no responde, o el correo no está configurado o falla |
@@ -652,9 +831,10 @@ texto de `message`, que puede reescribirse. Los códigos actuales son:
 
 | Categoría | Códigos |
 |---|---|
-| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CATEGORY_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND`, `PURCHASE_NOT_FOUND`, `SUPPLIER_NOT_FOUND` |
-| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_IN_USE`, `CATEGORY_IN_USE`, `CLIENT_IN_USE`, `SUPPLIER_IN_USE`, `BRAND_ALREADY_EXISTS`, `CATEGORY_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SUPPLIER_INACTIVE`, `SALE_SERIES_EXHAUSTED` |
-| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CATEGORY_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA`, `SALES_REPORT_RANGE_INVALID`, `PURCHASES_REPORT_RANGE_INVALID` |
+| No encontrado (404) | `PRODUCT_NOT_FOUND`, `BRAND_NOT_FOUND`, `CATEGORY_NOT_FOUND`, `CLIENT_NOT_FOUND`, `DOCUMENT_TYPE_NOT_FOUND`, `SALE_NOT_FOUND`, `SALE_TYPE_NOT_FOUND`, `DISTRICT_NOT_FOUND`, `DEPARTMENT_NOT_FOUND`, `PROVINCE_NOT_FOUND`, `PURCHASE_NOT_FOUND`, `SUPPLIER_NOT_FOUND`, `PAYMENT_NOT_FOUND`, `USER_NOT_FOUND`, `PURCHASE_ORDER_NOT_FOUND`, `CREDIT_NOTE_NOT_FOUND` |
+| Conflicto (409) | `PRODUCT_IN_USE`, `BRAND_IN_USE`, `CATEGORY_IN_USE`, `CLIENT_IN_USE`, `SUPPLIER_IN_USE`, `BRAND_ALREADY_EXISTS`, `CATEGORY_ALREADY_EXISTS`, `CLIENT_DOCUMENT_ALREADY_EXISTS`, `CLIENT_INACTIVE`, `PRODUCT_INACTIVE`, `SUPPLIER_INACTIVE`, `SALE_SERIES_EXHAUSTED`, `USER_EMAIL_CONFLICT`, `INVALID_PURCHASE_ORDER` |
+| No autorizado (401) | `INVALID_CREDENTIALS` (credenciales incorrectas o usuario inactivo en login), token ausente o expirado en rutas protegidas |
+| Entrada inválida (400) | `VALIDATION_ERROR`, `INVALID_UUID`, `INVALID_MONEY`, `INVALID_PRICE_RANGE`, `INVALID_PAGINATION`, `INVALID_PRODUCT_TEXT`, `INVALID_BRAND_DESCRIPTION`, `INVALID_CATEGORY_DESCRIPTION`, `INVALID_CLIENT_DESCRIPTION`, `INVALID_CLIENT_DOCUMENT`, `INVALID_DOCUMENT_TYPE_ID`, `INVALID_SALE_TYPE_ID`, `INVALID_DOCUMENT_TYPE`, `INVALID_SALE_TYPE`, `INVALID_UBIGEO`, `INVALID_SALE_NUMBER`, `INVALID_SALE_LINE`, `INVALID_SALE_FILTER`, `INVALID_DEPARTMENT_ID`, `INVALID_PROVINCE_ID`, `INVALID_DISTRICT_ID`, `INVALID_UBIGEO_DATA`, `SALES_REPORT_RANGE_INVALID`, `PURCHASES_REPORT_RANGE_INVALID`, `INVALID_PAYMENT`, `INVALID_CREDIT_NOTE` |
 | Dominio genérico (422) | `INVALID_SALE`, `UNPROCESSABLE_ENTITY` |
 | Límite de peticiones (429) | `TOO_MANY_REQUESTS` |
 | Infraestructura | `SERVICE_UNAVAILABLE` (503: base caída o correo no disponible), `INTERNAL_ERROR` (500) |
@@ -802,8 +982,10 @@ Documentadas en `.env.example`.
 | `MAIL_USER` | — | Usuario SMTP |
 | `MAIL_PASSWORD` | — | Con Gmail y verificación en dos pasos, una *App Password*, no la contraseña de la cuenta |
 | `MAIL_FROM` | — | Remitente. Si se omite, se usa `MAIL_USER` |
+| `JWT_SECRET` | — | Obligatoria. Clave para firmar y verificar los JWT |
+| `JWT_EXPIRES_IN` | `7d` | Tiempo de expiración del token (formato `ms`: `7d`, `24h`, `3600`) |
 
-Si falta una obligatoria (las de PostgreSQL), el proceso corta al arrancar con
+Si falta una obligatoria (las de PostgreSQL y `JWT_SECRET`), el proceso corta al arrancar con
 un mensaje que la nombra, en vez de fallar más tarde con un error ilegible del
 driver. Las de correo no son obligatorias: la app arranca sin ellas y
 `send-email` responde 503 hasta que se completen.
