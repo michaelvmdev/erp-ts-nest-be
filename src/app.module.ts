@@ -26,6 +26,7 @@ import { CreditNotesModule } from './credit-notes/credit-notes.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AuthModule } from './auth/auth.module';
+import { NpsModule } from './nps/nps.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { AuthModule } from './auth/auth.module';
     SuppliersModule,
     UbigeoModule,
     DashboardModule,
+    NpsModule,
   ],
   controllers: [AppController],
   providers: [
