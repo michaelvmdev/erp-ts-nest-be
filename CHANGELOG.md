@@ -293,7 +293,7 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 #### Base de datos — esquema (`db/db.sql`)
 
-- Esquema PostgreSQL de `dbSales` con 11 tablas: `brands`, `categories`,
+- Esquema PostgreSQL de `dberp` con 11 tablas: `brands`, `categories`,
   `products`, `clients`, `document_types`, `sale_types`,
   `departments`, `provinces`, `districts`, `sales` y `sale_details`.
 - Claves primarias en todas las tablas. `sale_details` usa PK compuesta
