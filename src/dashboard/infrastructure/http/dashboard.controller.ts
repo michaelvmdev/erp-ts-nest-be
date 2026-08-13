@@ -1,10 +1,12 @@
-import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { GetMonthlySalesUseCase } from '../../application/get-monthly-sales.use-case';
 import { GetMonthlySalesByCategoryUseCase } from '../../application/get-monthly-sales-by-category.use-case';
@@ -55,6 +57,8 @@ import { MonthComparisonResponseDto } from './dto/month-comparison.response.dto'
  * ventas: el tablero muestra "sin datos", no un error.
  */
 @ApiTags('dashboard')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(

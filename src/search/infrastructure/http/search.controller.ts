@@ -1,5 +1,6 @@
-import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { IsString, MinLength } from 'class-validator';
@@ -18,6 +19,8 @@ export interface SearchResult {
 }
 
 @ApiTags('search')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('search')
 export class SearchController {
   constructor(@InjectDataSource() private readonly ds: DataSource) {}

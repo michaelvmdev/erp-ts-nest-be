@@ -10,9 +10,11 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -22,6 +24,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateUserEcommerceUseCase } from '../../application/create-user-ecommerce.use-case';
 import { DeleteUserEcommerceUseCase } from '../../application/delete-user-ecommerce.use-case';
@@ -40,6 +43,8 @@ import { UpdateUserEcommerceRequestDto } from './dto/update-user-ecommerce.reque
 const UUID_EJEMPLO = '181e2a56-6b4b-42b1-9e56-5ecf0bbf47b3';
 
 @ApiTags('users-ecommerce')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
 @Controller('users-ecommerce')
 export class UsersEcommerceController {
   constructor(
