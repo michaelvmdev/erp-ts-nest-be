@@ -66,6 +66,10 @@ export class TypeOrmUserRepository implements UserRepository {
       userActive: snap.active,
     });
   }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.orm.update({ userId }, { passwordHash });
+  }
 }
 
 export const USER_REPOSITORY_PROVIDER = {

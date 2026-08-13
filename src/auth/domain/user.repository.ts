@@ -7,6 +7,7 @@ export interface UserRepository {
   search(params: { page: number; limit: number; offset: number }): Promise<Page<User>>;
   insert(user: User): Promise<void>;
   save(user: User): Promise<void>;
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
 }
 
 export const USER_REPOSITORY = Symbol('UserRepository');
