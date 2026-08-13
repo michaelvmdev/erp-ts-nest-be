@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -21,6 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { AuditService } from '../../../audit/audit.service';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateCreditNoteUseCase } from '../../application/create-credit-note.use-case';
 import { FindCreditNoteUseCase } from '../../application/find-credit-note.use-case';
@@ -42,6 +44,7 @@ export class CreditNotesController {
     private readonly searchCreditNotes: SearchCreditNotesUseCase,
     private readonly findCreditNote: FindCreditNoteUseCase,
     private readonly createCreditNote: CreateCreditNoteUseCase,
+    private readonly audit: AuditService,
   ) {}
 
   @Get()
@@ -89,8 +92,13 @@ export class CreditNotesController {
   @ApiCreatedResponse({ type: CreditNoteResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorDto })
   @ApiNotFoundResponse({ type: ApiErrorDto })
-  async create(@Body() dto: CreateCreditNoteRequestDto): Promise<CreditNoteResponseDto> {
+  async create(
+    @Body() dto: CreateCreditNoteRequestDto,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @Req() req: any,
+  ): Promise<CreditNoteResponseDto> {
     const cn = await this.createCreditNote.execute(dto);
+    void this.audit.log('credit_note', cn.id.value, 'CREATE', req.user?.email ?? 'system', { saleId: dto.saleId });
     return CreditNoteResponseDto.fromDomain(cn);
   }
 }

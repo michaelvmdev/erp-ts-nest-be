@@ -8,8 +8,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UseGuards,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -23,6 +24,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { AuditService } from '../../../audit/audit.service';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreatePurchaseOrderUseCase } from '../../application/create-purchase-order.use-case';
 import { FindPurchaseOrderUseCase } from '../../application/find-purchase-order.use-case';
@@ -47,6 +49,7 @@ export class PurchaseOrdersController {
     private readonly findOrder: FindPurchaseOrderUseCase,
     private readonly createOrder: CreatePurchaseOrderUseCase,
     private readonly updateOrder: UpdatePurchaseOrderUseCase,
+    private readonly audit: AuditService,
   ) {}
 
   @Get()
@@ -107,8 +110,11 @@ export class PurchaseOrdersController {
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdatePurchaseOrderRequestDto,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @Req() req: any,
   ): Promise<PurchaseOrderResponseDto> {
     const order = await this.updateOrder.execute(id, dto);
+    void this.audit.log('purchase_order', id, 'UPDATE', req.user?.email ?? 'system', { status: dto.status, notes: dto.notes });
     return PurchaseOrderResponseDto.fromDomain(order);
   }
 }
