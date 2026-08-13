@@ -27,6 +27,10 @@ import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AuthModule } from './auth/auth.module';
 import { NpsModule } from './nps/nps.module';
+import { UsersEcommerceModule } from './users-ecommerce/users-ecommerce.module';
+import { ExportsModule } from './exports/exports.module';
+import { SearchModule } from './search/search.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -75,6 +79,10 @@ import { NpsModule } from './nps/nps.module';
     UbigeoModule,
     DashboardModule,
     NpsModule,
+    UsersEcommerceModule,
+    ExportsModule,
+    SearchModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [

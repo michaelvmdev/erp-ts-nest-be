@@ -16,7 +16,7 @@ cargá el esquema y los datos con el runner de `db/`:
 node db/run.mjs --create-db
 ```
 
-`--create-db` crea la base `dbSales` si todavía no existe (se salta si no se
+`--create-db` crea la base `dberp` si todavía no existe (se salta si no se
 tiene permiso, asumiendo que ya está creada). Sin ese flag, `node db/run.mjs`
 ejecuta todo en el orden correcto: esquema (`db.sql`), ubigeo y catálogos
 (`db_ubigeo.sql`, `db_data.sql`) y los 20 meses de ventas de `db/sales/`
@@ -740,6 +740,42 @@ Cuerpo de `POST /payments`:
 `DELETE /payments/{paymentId}` responde 204 sin cuerpo si tiene éxito, o 404
 `PAYMENT_NOT_FOUND` si el pago no existe.
 
+### NPS (Net Promoter Score)
+
+Encuestas de satisfacción ligadas a ventas. Una encuesta por venta (clave única
+sobre `sale_id`). El score va de 0 a 10: promotores (9–10), pasivos (7–8),
+detractores (0–6). La fórmula es `((promotores / total) − (detractores / total))
+× 100`, rango −100 a +100.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/nps/score` | Puntaje NPS global con porcentajes por categoría |
+| `GET` | `/nps` | Listado paginado de encuestas con filtros |
+| `GET` | `/nps/{surveyId}` | Consulta una encuesta |
+| `POST` | `/nps` | Registra una encuesta |
+
+`GET /nps/score` responde `{ promotersPct, passivesPct, detractorsPct, score }`.
+Si no hay encuestas, `score` es `null` y los porcentajes son `"0.00"`.
+
+Cuerpo de `POST /nps`:
+
+```json
+{
+  "saleId": "UUID de la venta",
+  "score": 9,
+  "comment": "Muy buena atención"
+}
+```
+
+`score` es obligatorio y debe ser un entero de 0 a 10. `comment` es opcional.
+Registrar una segunda encuesta para la misma venta responde 409
+`NPS_SURVEY_ALREADY_EXISTS`. Si la venta no existe, responde 404
+`NPS_SALE_NOT_FOUND`.
+
+La relación entre usuarios del ecommerce (`user_ecommerce`) y sus respuestas NPS
+es indirecta: `user_ecommerce → sales → nps_surveys`, a través de
+`sales.user_ecommerce_id`.
+
 ### Autenticación y usuarios
 
 Autenticación basada en JWT. El token de acceso se obtiene en `POST
@@ -939,10 +975,14 @@ esquema van por SQL o por migraciones.
 
 | Archivo | Contenido |
 |---|---|
-| `db/db.sql` | Estructura: 11 tablas, restricciones e índices. Sin datos |
+| `db/db.sql` | Estructura: tablas, restricciones e índices (incluye `nps_surveys`, `user_ecommerce` y columna `sales.user_ecommerce_id`). Sin datos |
 | `db/db_ubigeo.sql` | Ubigeo INEI: 25 departamentos, 196 provincias, 1874 distritos |
 | `db/db_data.sql` | Catálogos de referencia, 100 clientes, 50 marcas, 11 categorías y 500 productos |
+| `db/db_nps.sql` | Esquema aditivo (`IF NOT EXISTS`) de `nps_surveys` — útil para actualizar bases ya cargadas |
+| `db/db_user_ecommerce_schema.sql` | Esquema aditivo de `user_ecommerce` y columna `sales.user_ecommerce_id` |
+| `db/db_user_ecommerce.sql` | 500 usuarios ecommerce, asignación round-robin a ventas y 25% de encuestas NPS |
 | `db/sales/{2025,2026}/*.sql` | Ventas de prueba, un archivo por mes, de enero de 2025 a agosto de 2026 |
+| `db/purchases/*.sql` | Compras de prueba (varios archivos) |
 | `db/run.mjs` | Runner en Node que ejecuta estos archivos en el orden correcto (ver [Puesta en marcha](#puesta-en-marcha)) |
 `db.sql` solo crea estructuras y los demás solo insertan filas, así que
 recargar los datos no obliga a recrear el esquema. El ubigeo va aparte por

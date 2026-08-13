@@ -9,6 +9,32 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
 
 ### Añadido
 
+#### Analítica y reporting
+
+- **Rentabilidad por producto/categoría** (`GET /dashboard/profitability`): margen bruto, unidades vendidas, ingresos y costo promedio por producto, agrupados con su categoría. Filtros por rango de fechas.
+- **Comparativa MoM/YoY** (`GET /dashboard/comparison`): para un mes y año dados devuelve el importe y conteo de ventas vs. el mes anterior y el mismo mes del año previo, con los porcentajes de variación calculados.
+- **Exportación CSV** (`GET /exports/sales|purchases|products|clients`): descarga directa con cabeceras `Content-Disposition` y BOM UTF-8 para compatibilidad con Excel.
+
+#### Operaciones
+
+- **Alertas de stock** (`GET /stock/alerts`): lista de productos cuyo stock actual está por debajo del `minimum_stock` definido en cada producto, ordenados por mayor déficit.
+- **Flujo PO → stock**: al marcar una orden de compra como `received` (con `warehouseId` opcional en el body), se generan automáticamente movimientos `purchase_in` en el almacén indicado.
+- **Devoluciones → stock**: al crear una nota de crédito (con `warehouseId` opcional), se generan movimientos `return_in` en el almacén indicado.
+- Migración `db/db_product_minimum_stock.sql`: añade columna `minimum_stock INTEGER DEFAULT 0` a la tabla `products`.
+- Migración `db/db_purchase_order_status_fix.sql`: corrige el `CHECK` de `purchase_order_status` para incluir `received` (antes `completed`).
+
+#### Ecommerce / clientes
+
+- **Historial de compras por usuario** (`GET /users-ecommerce/:id/history`): devuelve todas las ventas asociadas a un usuario ecommerce con estado, total y puntuación NPS si existe.
+- **Campaña de email por segmento NPS** (`POST /nps/campaign`): obtiene los emails de usuarios activos en el segmento indicado (`promoter` | `passive` | `detractor`) y simula el envío, devolviendo la lista de destinatarios.
+
+#### UX / calidad
+
+- **Búsqueda global** (`GET /search?q=`): busca en productos, clientes, proveedores y usuarios ecommerce de forma unificada; devuelve hasta 10 resultados por entidad, mínimo 2 caracteres.
+- **Auditoría de cambios** (`GET /audit`): listado paginado del log de auditoría con filtros por entidad, acción (`CREATE` | `UPDATE` | `DELETE`), usuario y rango de fechas. Migración `db/db_audit_log.sql` crea la tabla `audit_log`.
+
+### Añadido (anterior)
+
 #### Backend — Módulo de autenticación, usuarios y roles
 
 - **Auth** (`/auth`): `POST /auth/register` crea un usuario (email, contraseña,
@@ -77,6 +103,58 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   (tipo `purchase_in`, cantidad positiva por línea).
 - Tabla `stock_movements` con `product_id`, `warehouse_id`, `movement_type`,
   `quantity` y `reference_id`.
+
+#### Backend — Analítica NPS por categoría y producto
+
+- `GET /nps/analytics` — devuelve NPS desglosado por categoría de producto y por
+  producto (top 20). Acepta filtros opcionales `dateFrom` y `dateTo`.
+  - `byCategory[]`: por cada categoría, conteos de promotores/pasivos/detractores
+    y `npsScore` calculado (−100 a +100, null si sin datos).
+  - `byProduct[]`: misma estructura para los 20 productos con más encuestas.
+  - Usa `COUNT(DISTINCT survey_id)` para que una encuesta no se cuente más de una
+    vez cuando la venta incluye varios productos de la misma categoría.
+  - Join: `nps_surveys → sales → sale_details → products → categories`.
+- Caso de uso `GetNpsAnalyticsUseCase` y tipos de dominio `NpsCategoryStats` /
+  `NpsProductStats` en `nps-survey.repository.ts`.
+
+#### Backend — Módulo usuarios ecommerce
+
+- **Usuarios ecommerce** (`/users-ecommerce`): CRUD completo sobre la tabla `user_ecommerce`.
+  - `GET /users-ecommerce` — listado paginado con filtros por `email`, `firstName`, `lastName`,
+    `active` (ILIKE parcial) y ordenamiento por cualquier campo + paginacion.
+  - `GET /users-ecommerce/:userEcommerceId` — detalle de un usuario.
+  - `POST /users-ecommerce` — alta de nuevo usuario; el `userEcommerceId` lo genera el backend;
+    el email se normaliza a minusculas y se valida unicidad con 409 en conflicto.
+  - `PATCH /users-ecommerce/:userEcommerceId` — actualizacion parcial; todos los campos son
+    opcionales; `{"active": false}` desactiva el usuario sin borrarlo.
+  - `DELETE /users-ecommerce/:userEcommerceId` — baja fisica; si el usuario esta referenciado
+    en ventas se responde 409 con sugerencia de desactivar.
+- Arquitectura hexagonal identica a los demas modulos: entidad `UserEcommerce` en dominio,
+  `TypeOrmUserEcommerceRepository` en infrastructura, `UserEcommerceOrmEntity` mapeado a la
+  tabla `user_ecommerce` existente (sin migraciones adicionales).
+- Errores de dominio: `USER_ECOMMERCE_NOT_FOUND` (404), `USER_ECOMMERCE_EMAIL_ALREADY_EXISTS` (409),
+  `USER_ECOMMERCE_IN_USE` (409).
+
+#### Backend — Módulo NPS (Net Promoter Score)
+
+- Módulo `nps` con arquitectura hexagonal y DDD completo (dominio, aplicación e
+  infraestructura).
+- `GET /nps/score` — puntaje NPS global: `promotersPct`, `passivesPct`,
+  `detractorsPct` y `score` (−100 a +100, redondeado a 2 decimales). Si no hay
+  encuestas, `score` es `null` y los porcentajes son `"0.00"`. La ruta se
+  declara **antes** de `GET /nps/:surveyId` para evitar que "score" se interprete
+  como UUID.
+- `GET /nps` — listado paginado de encuestas con filtros.
+- `GET /nps/:surveyId` — consulta individual de una encuesta.
+- `POST /nps` — registra una encuesta vinculada a una venta (`score` 0–10,
+  `comment` opcional). Una encuesta por venta; el segundo intento responde 409
+  `NPS_SURVEY_ALREADY_EXISTS`. Venta inexistente responde 404 `NPS_SALE_NOT_FOUND`.
+- Fórmula: `((promotores / total) − (detractores / total)) × 100`. Categorías:
+  promotores 9–10, pasivos 7–8, detractores 0–6.
+- Estadísticas calculadas con `COUNT(*) FILTER (WHERE ...)` en una sola consulta
+  SQL (via `DataSource`), sin cargar todas las encuestas en memoria.
+- La relación con `user_ecommerce` es indirecta:
+  `user_ecommerce → sales → nps_surveys` a través de `sales.user_ecommerce_id`.
 
 #### Backend — Reportes en PDF de compras a proveedores
 
@@ -366,6 +444,31 @@ y el proyecto se adhiere al [Versionado Semántico](https://semver.org/lang/es/)
   `--dry-run` para listar qué se ejecutaría sin tocar nada. Al terminar,
   imprime cuántas filas quedaron por tabla y el último correlativo de cada
   tipo de comprobante, para verificar la carga de un vistazo.
+
+#### Base de datos — NPS y usuarios ecommerce
+
+- Tabla `nps_surveys`: PK `survey_id` (UUID), FK `sale_id → sales` con
+  restricción `UNIQUE` (una encuesta por venta), `score SMALLINT CHECK (0–10)`,
+  `comment TEXT` opcional y `created_at TIMESTAMPTZ`.
+- Tabla `user_ecommerce`: `user_ecommerce_id` (UUID PK), `email` (UNIQUE),
+  `first_name`, `last_name`, `phone` (nullable), `user_active DEFAULT true` y
+  `created_at`.
+- Columna `sales.user_ecommerce_id` (UUID nullable): FK hacia `user_ecommerce`,
+  relaciona cada venta con su comprador del ecommerce.
+- Scripts aditivos (idempotentes con `IF NOT EXISTS`): `db/db_nps.sql` y
+  `db/db_user_ecommerce_schema.sql`; útiles para actualizar entornos ya cargados
+  sin destruir datos.
+- `db/db_user_ecommerce.sql`: inserta 500 usuarios ecommerce, asigna ventas en
+  round-robin determinista (por `ROW_NUMBER() OVER (ORDER BY sale_date)` + módulo)
+  y genera encuestas NPS para el 25% de las ventas con scores y comentarios
+  reproducibles mediante `hashtext()` y UUIDs derivados de `md5()`.
+
+### Cambiado
+
+- La base de datos pasa de `dbSales` / `dbsales` a **`dberp`** en todos los
+  entornos: `.env.example`, `.env.cloud` y referencias en este archivo. Aplicado
+  con `ALTER DATABASE dbsales RENAME TO dberp` tanto en local como en Supabase
+  (cloud), preservando todos los datos existentes.
 
 ### Notas de diseño
 
