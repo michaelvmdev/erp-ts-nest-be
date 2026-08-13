@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { LoginUseCase } from '../../application/login.use-case';
 import { RegisterUserUseCase } from '../../application/register-user.use-case';
@@ -29,6 +30,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Login and get JWT' })
   async login(@Body() dto: LoginRequestDto) {
     return this.loginUC.run(dto);
