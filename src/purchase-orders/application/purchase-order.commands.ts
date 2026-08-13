@@ -16,6 +16,7 @@ export interface CreatePurchaseOrderCommand {
 export interface UpdatePurchaseOrderCommand {
   readonly status?: PurchaseOrderStatus;
   readonly notes?: string | null;
+  readonly warehouseId?: string;
 }
 
 export interface SearchPurchaseOrdersQuery {

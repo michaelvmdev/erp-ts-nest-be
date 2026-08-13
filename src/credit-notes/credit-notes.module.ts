@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
+import { StockModule } from '../stock/stock.module';
 import {
   SaleDetailOrmEntity,
   SaleOrmEntity,
@@ -25,6 +26,7 @@ import { TypeOrmCreditNoteRepository } from './infrastructure/persistence/typeor
       SaleDetailOrmEntity,
     ]),
     AuthModule,
+    StockModule,
   ],
   controllers: [CreditNotesController],
   providers: [

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { GetStockAlertsUseCase } from './application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from './application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from './application/get-stock-movements.use-case';
 import { STOCK_REPOSITORY } from './domain/stock.repository';
@@ -18,6 +19,7 @@ import { StockController } from './infrastructure/http/stock.controller';
     { provide: STOCK_WRITER, useExisting: TypeOrmStockWriterRepository },
     GetStockLevelsUseCase,
     GetStockMovementsUseCase,
+    GetStockAlertsUseCase,
   ],
   exports: [STOCK_WRITER],
 })

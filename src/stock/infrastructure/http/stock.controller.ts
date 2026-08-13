@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
+import { GetStockAlertsUseCase } from '../../application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from '../../application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from '../../application/get-stock-movements.use-case';
 import { GetStockLevelsQueryDto } from './dto/get-stock-levels.query.dto';
@@ -29,6 +30,7 @@ export class StockController {
   constructor(
     private readonly getStockLevels: GetStockLevelsUseCase,
     private readonly getStockMovements: GetStockMovementsUseCase,
+    private readonly getStockAlerts: GetStockAlertsUseCase,
   ) {}
 
   @Get()
@@ -99,5 +101,16 @@ export class StockController {
         hasPreviousPage: page.page > 1,
       },
     };
+  }
+
+  @Get('alerts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Alertas de stock bajo mínimo',
+    description: 'Productos cuyo stock actual es inferior al minimum_stock configurado.',
+  })
+  @ApiOkResponse({ description: 'Lista de productos con stock insuficiente.' })
+  async alerts() {
+    return this.getStockAlerts.execute();
   }
 }

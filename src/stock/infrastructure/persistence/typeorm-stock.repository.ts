@@ -6,7 +6,7 @@ import { StockLevel } from '../../domain/stock-level';
 import { StockLevelQueryCriteria } from '../../domain/stock-level-query.criteria';
 import { StockMovement } from '../../domain/stock-movement';
 import { StockMovementQueryCriteria } from '../../domain/stock-movement-query.criteria';
-import { StockRepository } from '../../domain/stock.repository';
+import { StockAlert, StockRepository } from '../../domain/stock.repository';
 
 @Injectable()
 export class TypeOrmStockRepository implements StockRepository {
@@ -154,5 +154,37 @@ export class TypeOrmStockRepository implements StockRepository {
     }));
 
     return new Page(items, Number(total), criteria.page.page, criteria.page.limit);
+  }
+
+  async findLowStock(): Promise<StockAlert[]> {
+    const rows: Array<{
+      productId: string; productName: string;
+      warehouseId: string; warehouseCode: string;
+      currentStock: string; minimumStock: string;
+    }> = await this.ds.query(
+      `SELECT
+         sm.product_id              AS "productId",
+         p.product_name             AS "productName",
+         sm.warehouse_id            AS "warehouseId",
+         w.warehouse_code           AS "warehouseCode",
+         SUM(sm.quantity)::text     AS "currentStock",
+         p.minimum_stock::text      AS "minimumStock"
+       FROM stock_movements sm
+       JOIN products   p ON p.product_id  = sm.product_id
+       JOIN warehouses w ON w.warehouse_id = sm.warehouse_id
+       GROUP BY sm.product_id, p.product_name, sm.warehouse_id, w.warehouse_code, p.minimum_stock
+       HAVING SUM(sm.quantity) < p.minimum_stock
+       ORDER BY (p.minimum_stock - SUM(sm.quantity)) DESC`,
+    );
+
+    return rows.map((r) => ({
+      productId:    r.productId,
+      productName:  r.productName,
+      warehouseId:  r.warehouseId,
+      warehouseCode: r.warehouseCode,
+      currentStock: Number(r.currentStock),
+      minimumStock: Number(r.minimumStock),
+      deficit:      Number(r.minimumStock) - Number(r.currentStock),
+    }));
   }
 }

@@ -9,6 +9,7 @@ export interface CreateCreditNoteCommand {
   readonly creditNoteDate?: string;
   readonly creditNoteHour?: string;
   readonly creditNoteDetails: readonly CreditNoteLineCommand[];
+  readonly warehouseId?: string;
 }
 
 export interface SearchCreditNotesQuery {

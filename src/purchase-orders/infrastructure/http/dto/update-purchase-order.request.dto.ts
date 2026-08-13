@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 const STATUSES = ['pending', 'partial', 'received', 'cancelled'] as const;
 
@@ -14,4 +14,9 @@ export class UpdatePurchaseOrderRequestDto {
   @IsString()
   @MaxLength(500)
   notes?: string | null;
+
+  @ApiPropertyOptional({ description: 'Almacén destino al recibir la orden (requerido cuando status=received).' })
+  @IsOptional()
+  @IsUUID()
+  warehouseId?: string;
 }

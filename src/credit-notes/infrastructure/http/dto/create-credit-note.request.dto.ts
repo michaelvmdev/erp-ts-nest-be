@@ -60,4 +60,9 @@ export class CreateCreditNoteRequestDto {
   @ValidateNested({ each: true })
   @Type(() => CreditNoteLineRequestDto)
   creditNoteDetails!: CreditNoteLineRequestDto[];
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Almacén al que se repone el stock (return_in). Omitir para no mover stock.' })
+  @IsOptional()
+  @IsUUID()
+  warehouseId?: string;
 }

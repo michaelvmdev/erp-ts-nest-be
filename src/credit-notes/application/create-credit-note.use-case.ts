@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { ProductId } from '../../products/domain/value-objects/identifiers.value-object';
+import { STOCK_WRITER } from '../../stock/domain/stock-writer';
+import type { StockWriter } from '../../stock/domain/stock-writer';
 import { CreditNote } from '../domain/credit-note';
 import { CreditNoteLine } from '../domain/credit-note-line';
 import {
@@ -25,6 +27,8 @@ export class CreateCreditNoteUseCase {
     private readonly creditNotes: CreditNoteRepository,
     @Inject(CREDIT_NOTE_CATALOG)
     private readonly catalogo: CreditNoteCatalog,
+    @Inject(STOCK_WRITER)
+    private readonly stockWriter: StockWriter,
   ) {}
 
   async execute(command: CreateCreditNoteCommand): Promise<CreditNote> {
@@ -46,7 +50,7 @@ export class CreateCreditNoteUseCase {
 
     const { fecha, hora } = momentoDeEmision(command);
 
-    return this.creditNotes.emit(command.saleId, (numero) =>
+    const creditNote = await this.creditNotes.emit(command.saleId, (numero) =>
       CreditNote.create({
         id: CreditNoteId.of(randomUUID()),
         saleId: command.saleId,
@@ -57,6 +61,21 @@ export class CreateCreditNoteUseCase {
         lines: lineas,
       }),
     );
+
+    if (command.warehouseId) {
+      await this.stockWriter.insertMovements(
+        lineas.map((l) => ({
+          productId:    l.productId.value,
+          warehouseId:  command.warehouseId!,
+          movementType: 'return_in' as const,
+          quantity:     l.quantity,
+          unitCost:     l.unitPrice.toNumber(),
+          referenceId:  creditNote.id.value,
+        })),
+      );
+    }
+
+    return creditNote;
   }
 }
 

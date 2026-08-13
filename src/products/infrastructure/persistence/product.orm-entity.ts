@@ -62,6 +62,9 @@ export class ProductOrmEntity {
   @Column({ name: 'product_active', type: 'boolean', default: true })
   productActive!: boolean;
 
+  @Column({ name: 'minimum_stock', type: 'int', default: 0 })
+  minimumStock!: number;
+
   @ManyToOne(() => BrandOrmEntity, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'brand_id', referencedColumnName: 'brandId' })
   brand?: BrandOrmEntity;

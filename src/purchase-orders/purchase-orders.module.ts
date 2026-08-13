@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
+import { StockModule } from '../stock/stock.module';
 import { ProductOrmEntity } from '../products/infrastructure/persistence/product.orm-entity';
 import { SupplierOrmEntity } from '../suppliers/infrastructure/persistence/supplier.orm-entity';
 import { CreatePurchaseOrderUseCase } from './application/create-purchase-order.use-case';
@@ -27,6 +28,7 @@ import { TypeOrmPurchaseOrderRepository } from './infrastructure/persistence/typ
       ProductOrmEntity,
     ]),
     AuthModule,
+    StockModule,
   ],
   controllers: [PurchaseOrdersController],
   providers: [
