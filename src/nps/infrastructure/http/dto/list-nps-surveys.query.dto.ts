@@ -93,3 +93,15 @@ export class NpsScoreQueryDto {
   @IsDateString()
   dateTo?: string;
 }
+
+export class NpsAnalyticsQueryDto {
+  @ApiPropertyOptional({ example: '2026-01-01', description: 'Inicio del periodo (inclusive).' })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-10', description: 'Fin del periodo (inclusive).' })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
+}

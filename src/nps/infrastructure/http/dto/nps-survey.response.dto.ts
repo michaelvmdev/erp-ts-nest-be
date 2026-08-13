@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NpsSurvey } from '../../../domain/nps-survey';
 import { NpsScoreResult } from '../../../application/get-nps-score.use-case';
+import { NpsAnalyticsResult } from '../../../application/get-nps-analytics.use-case';
 import { PageMetaDto } from '../../../../products/infrastructure/http/dto/product.response.dto';
 
 export class NpsSurveyResponseDto {
@@ -91,6 +92,41 @@ export class NpsScoreResponseDto {
 
   static from(result: NpsScoreResult): NpsScoreResponseDto {
     const dto = new NpsScoreResponseDto();
+    Object.assign(dto, result);
+    return dto;
+  }
+}
+
+export class NpsCategoryStatsDto {
+  @ApiProperty() categoryId!: string;
+  @ApiProperty() categoryName!: string;
+  @ApiProperty() totalSurveys!: number;
+  @ApiProperty() promoters!: number;
+  @ApiProperty() passives!: number;
+  @ApiProperty() detractors!: number;
+  @ApiProperty({ nullable: true }) npsScore!: number | null;
+}
+
+export class NpsProductStatsDto {
+  @ApiProperty() productId!: string;
+  @ApiProperty() productName!: string;
+  @ApiProperty() categoryId!: string;
+  @ApiProperty() categoryName!: string;
+  @ApiProperty() totalSurveys!: number;
+  @ApiProperty() promoters!: number;
+  @ApiProperty() passives!: number;
+  @ApiProperty() detractors!: number;
+  @ApiProperty({ nullable: true }) npsScore!: number | null;
+}
+
+export class NpsAnalyticsResponseDto {
+  @ApiProperty({ type: [NpsCategoryStatsDto] }) byCategory!: NpsCategoryStatsDto[];
+  @ApiProperty({ type: [NpsProductStatsDto] }) byProduct!: NpsProductStatsDto[];
+  @ApiPropertyOptional({ nullable: true }) dateFrom!: string | null;
+  @ApiPropertyOptional({ nullable: true }) dateTo!: string | null;
+
+  static from(result: NpsAnalyticsResult): NpsAnalyticsResponseDto {
+    const dto = new NpsAnalyticsResponseDto();
     Object.assign(dto, result);
     return dto;
   }

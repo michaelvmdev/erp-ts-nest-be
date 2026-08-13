@@ -8,7 +8,13 @@ import {
   NpsSaleNotFoundError,
   NpsSurveyAlreadyExistsError,
 } from '../../domain/nps-survey.errors';
-import { NpsSurveyRepository, NpsStats } from '../../domain/nps-survey.repository';
+import {
+  NpsCampaignContact,
+  NpsCategoryStats,
+  NpsProductStats,
+  NpsSurveyRepository,
+  NpsStats,
+} from '../../domain/nps-survey.repository';
 import { NpsSurveyId } from '../../domain/value-objects/nps-survey-id.value-object';
 import { NpsSurveyMapper } from './nps-survey.mapper';
 import { NpsSurveyOrmEntity } from './nps-survey.orm-entity';
@@ -99,6 +105,135 @@ export class TypeOrmNpsSurveyRepository implements NpsSurveyRepository {
       }
       throw error;
     }
+  }
+
+  async getAnalyticsByCategory(from?: Date, to?: Date): Promise<NpsCategoryStats[]> {
+    const rows: Array<{
+      categoryId: string;
+      categoryName: string;
+      totalSurveys: number;
+      promoters: number;
+      passives: number;
+      detractors: number;
+      npsScore: string | null;
+    }> = await this.dataSource.query(
+      `SELECT
+         c.category_id                                                               AS "categoryId",
+         c.category_description                                                      AS "categoryName",
+         (COUNT(DISTINCT n.survey_id))::int                                          AS "totalSurveys",
+         (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score >= 9))::int              AS "promoters",
+         (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score BETWEEN 7 AND 8))::int  AS "passives",
+         (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score <= 6))::int              AS "detractors",
+         CASE
+           WHEN COUNT(DISTINCT n.survey_id) = 0 THEN NULL
+           ELSE ROUND(
+             (
+               (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score >= 9))::numeric
+               - (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score <= 6))::numeric
+             ) / COUNT(DISTINCT n.survey_id)::numeric * 100,
+             2
+           )
+         END                                                                         AS "npsScore"
+       FROM nps_surveys n
+       JOIN sales s          ON s.sale_id     = n.sale_id
+       JOIN sale_details sd  ON sd.sale_id    = s.sale_id
+       JOIN products p       ON p.product_id  = sd.product_id
+       JOIN categories c     ON c.category_id = p.category_id
+      WHERE ($1::timestamptz IS NULL OR n.created_at >= $1)
+        AND ($2::timestamptz IS NULL OR n.created_at <= $2)
+      GROUP BY c.category_id, c.category_description
+      ORDER BY COUNT(DISTINCT n.survey_id) DESC`,
+      [from ?? null, to ?? null],
+    );
+
+    return rows.map((r) => ({
+      categoryId: r.categoryId,
+      categoryName: r.categoryName,
+      totalSurveys: r.totalSurveys,
+      promoters: r.promoters,
+      passives: r.passives,
+      detractors: r.detractors,
+      npsScore: r.npsScore !== null ? parseFloat(r.npsScore) : null,
+    }));
+  }
+
+  async getAnalyticsByProduct(from?: Date, to?: Date): Promise<NpsProductStats[]> {
+    const rows: Array<{
+      productId: string;
+      productName: string;
+      categoryId: string;
+      categoryName: string;
+      totalSurveys: number;
+      promoters: number;
+      passives: number;
+      detractors: number;
+      npsScore: string | null;
+    }> = await this.dataSource.query(
+      `SELECT
+         p.product_id                                                                AS "productId",
+         p.product_name                                                              AS "productName",
+         c.category_id                                                               AS "categoryId",
+         c.category_description                                                      AS "categoryName",
+         (COUNT(DISTINCT n.survey_id))::int                                          AS "totalSurveys",
+         (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score >= 9))::int              AS "promoters",
+         (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score BETWEEN 7 AND 8))::int  AS "passives",
+         (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score <= 6))::int              AS "detractors",
+         CASE
+           WHEN COUNT(DISTINCT n.survey_id) = 0 THEN NULL
+           ELSE ROUND(
+             (
+               (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score >= 9))::numeric
+               - (COUNT(DISTINCT n.survey_id) FILTER (WHERE n.score <= 6))::numeric
+             ) / COUNT(DISTINCT n.survey_id)::numeric * 100,
+             2
+           )
+         END                                                                         AS "npsScore"
+       FROM nps_surveys n
+       JOIN sales s          ON s.sale_id     = n.sale_id
+       JOIN sale_details sd  ON sd.sale_id    = s.sale_id
+       JOIN products p       ON p.product_id  = sd.product_id
+       JOIN categories c     ON c.category_id = p.category_id
+      WHERE ($1::timestamptz IS NULL OR n.created_at >= $1)
+        AND ($2::timestamptz IS NULL OR n.created_at <= $2)
+      GROUP BY p.product_id, p.product_name, c.category_id, c.category_description
+      ORDER BY COUNT(DISTINCT n.survey_id) DESC
+      LIMIT 20`,
+      [from ?? null, to ?? null],
+    );
+
+    return rows.map((r) => ({
+      productId: r.productId,
+      productName: r.productName,
+      categoryId: r.categoryId,
+      categoryName: r.categoryName,
+      totalSurveys: r.totalSurveys,
+      promoters: r.promoters,
+      passives: r.passives,
+      detractors: r.detractors,
+      npsScore: r.npsScore !== null ? parseFloat(r.npsScore) : null,
+    }));
+  }
+
+  async getEmailsBySegment(segment: 'promoter' | 'passive' | 'detractor'): Promise<NpsCampaignContact[]> {
+    const scoreFilter =
+      segment === 'promoter' ? 'n.score >= 9'
+      : segment === 'passive' ? 'n.score BETWEEN 7 AND 8'
+      : 'n.score <= 6';
+
+    const rows: Array<{ email: string; firstName: string; lastName: string }> =
+      await this.dataSource.query(
+        `SELECT DISTINCT ON (ue.email)
+           ue.email       AS "email",
+           ue.first_name  AS "firstName",
+           ue.last_name   AS "lastName"
+         FROM nps_surveys n
+         JOIN sales s ON s.sale_id = n.sale_id
+         JOIN users_ecommerce ue ON ue.user_ecommerce_id = s.user_ecommerce_id
+         WHERE ${scoreFilter}
+           AND ue.user_active = true
+         ORDER BY ue.email`,
+      );
+    return rows;
   }
 
   async getStats(from?: Date, to?: Date): Promise<NpsStats> {

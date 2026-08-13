@@ -22,11 +22,19 @@ import {
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateNpsSurveyUseCase } from '../../application/create-nps-survey.use-case';
 import { FindNpsSurveyUseCase } from '../../application/find-nps-survey.use-case';
+import { GetNpsAnalyticsUseCase } from '../../application/get-nps-analytics.use-case';
 import { GetNpsScoreUseCase } from '../../application/get-nps-score.use-case';
 import { ListNpsSurveysUseCase } from '../../application/list-nps-surveys.use-case';
+import { SendNpsCampaignUseCase } from '../../application/send-nps-campaign.use-case';
 import { CreateNpsSurveyRequestDto } from './dto/create-nps-survey.request.dto';
-import { ListNpsSurveysQueryDto, NpsScoreQueryDto } from './dto/list-nps-surveys.query.dto';
+import { SendCampaignRequestDto } from './dto/send-campaign.request.dto';
 import {
+  ListNpsSurveysQueryDto,
+  NpsAnalyticsQueryDto,
+  NpsScoreQueryDto,
+} from './dto/list-nps-surveys.query.dto';
+import {
+  NpsAnalyticsResponseDto,
   NpsScoreResponseDto,
   NpsSurveyResponseDto,
   PaginatedNpsSurveysResponseDto,
@@ -42,6 +50,8 @@ export class NpsController {
     private readonly listSurveys: ListNpsSurveysUseCase,
     private readonly createSurvey: CreateNpsSurveyUseCase,
     private readonly getNpsScore: GetNpsScoreUseCase,
+    private readonly getNpsAnalytics: GetNpsAnalyticsUseCase,
+    private readonly sendCampaign: SendNpsCampaignUseCase,
   ) {}
 
   // "score" va declarado antes que ":surveyId" para que NestJS no lo
@@ -105,6 +115,26 @@ export class NpsController {
     };
   }
 
+  @Get('analytics')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Analitica NPS por categoria y producto',
+    description:
+      'Devuelve el NPS desglosado por categoria de producto y por producto (top 20).\n\n' +
+      'Usa COUNT(DISTINCT survey_id) para que una encuesta no se cuente mas de una vez ' +
+      'aunque la venta incluya varios productos de la misma categoria.\n\n' +
+      'Sin filtros de fecha devuelve el historico completo.',
+  })
+  @ApiOkResponse({ type: NpsAnalyticsResponseDto })
+  @ApiBadRequestResponse({ description: 'Fecha con formato invalido.', type: ApiErrorDto })
+  async analytics(@Query() query: NpsAnalyticsQueryDto): Promise<NpsAnalyticsResponseDto> {
+    const result = await this.getNpsAnalytics.execute({
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+    });
+    return NpsAnalyticsResponseDto.from(result);
+  }
+
   @Get(':surveyId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Consultar una encuesta NPS' })
@@ -117,6 +147,20 @@ export class NpsController {
   ): Promise<NpsSurveyResponseDto> {
     const survey = await this.findSurvey.execute(surveyId);
     return NpsSurveyResponseDto.fromDomain(survey);
+  }
+
+  @Post('campaign')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar campaña de email por segmento NPS',
+    description:
+      'Obtiene los emails de usuarios activos en el segmento indicado y simula el envio. ' +
+      'Devuelve la lista de destinatarios y el total.',
+  })
+  @ApiOkResponse({ description: 'Campaña procesada.' })
+  @ApiBadRequestResponse({ description: 'Cuerpo invalido.', type: ApiErrorDto })
+  async campaign(@Body() dto: SendCampaignRequestDto) {
+    return this.sendCampaign.execute(dto.segment, dto.subject);
   }
 
   @Post()
