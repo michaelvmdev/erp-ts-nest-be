@@ -114,6 +114,31 @@ export interface MonthlyTopPurchasedProduct {
   unitsPurchased: number;
 }
 
+export interface ProfitabilityRow {
+  readonly productId: string;
+  readonly productName: string;
+  readonly categoryId: string;
+  readonly categoryName: string;
+  readonly unitsSold: number;
+  readonly totalRevenue: string;
+  readonly avgCost: string | null;
+  readonly totalCost: string | null;
+  readonly marginPct: string | null;
+}
+
+export interface MonthComparison {
+  readonly year: number;
+  readonly month: number;
+  readonly currentAmount: string;
+  readonly currentCount: number;
+  readonly prevAmount: string;
+  readonly prevCount: number;
+  readonly prevYearAmount: string;
+  readonly prevYearCount: number;
+  readonly momPct: string | null;
+  readonly yoyPct: string | null;
+}
+
 /**
  * Puerto de salida del tablero.
  *
@@ -140,8 +165,6 @@ export interface DashboardRepository {
   topProductByMonth(period: YearPeriod): Promise<MonthlyTopProduct[]>;
   yearlySales(): Promise<YearlyAmount[]>;
 
-  // Lado de compras. Mismos criterios que ventas: los `top*` devuelven `null`
-  // cuando el mes no tiene compras y las series anuales traen siempre 12 meses.
   totalPurchases(period: MonthPeriod): Promise<TotalPurchases>;
   topPurchasedProduct(period: MonthPeriod): Promise<TopPurchasedProduct | null>;
   topSupplier(period: MonthPeriod): Promise<TopSupplier | null>;
@@ -155,6 +178,9 @@ export interface DashboardRepository {
     period: YearPeriod,
   ): Promise<MonthlyTopPurchasedProduct[]>;
   yearlyPurchases(): Promise<YearlyAmount[]>;
+
+  profitability(dateFrom?: string, dateTo?: string): Promise<ProfitabilityRow[]>;
+  monthComparison(year: number, month: number): Promise<MonthComparison>;
 }
 
 export const DASHBOARD_REPOSITORY = Symbol('DashboardRepository');

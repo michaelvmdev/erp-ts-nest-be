@@ -22,6 +22,8 @@ import { GetTotalSalesUseCase } from '../../application/get-total-sales.use-case
 import { GetTotalPurchasesUseCase } from '../../application/get-total-purchases.use-case';
 import { GetYearlySalesUseCase } from '../../application/get-yearly-sales.use-case';
 import { GetYearlyPurchasesUseCase } from '../../application/get-yearly-purchases.use-case';
+import { GetProfitabilityUseCase } from '../../application/get-profitability.use-case';
+import { GetMonthComparisonUseCase } from '../../application/get-month-comparison.use-case';
 import { MonthlySalesByCategoryQueryDto } from './dto/monthly-sales-by-category.query.dto';
 import { MonthlySalesByUbigeoQueryDto } from './dto/monthly-sales-by-ubigeo.query.dto';
 import { MonthlySalesResponseDto } from './dto/monthly-sales.response.dto';
@@ -39,6 +41,10 @@ import { TotalPurchasesResponseDto } from './dto/total-purchases.response.dto';
 import { YearQueryDto } from './dto/year.query.dto';
 import { YearlySalesResponseDto } from './dto/yearly-sales.response.dto';
 import { YearlyPurchasesResponseDto } from './dto/yearly-purchases.response.dto';
+import { ProfitabilityQueryDto } from './dto/profitability.query.dto';
+import { ProfitabilityRowDto } from './dto/profitability.response.dto';
+import { MonthComparisonQueryDto } from './dto/month-comparison.query.dto';
+import { MonthComparisonResponseDto } from './dto/month-comparison.response.dto';
 
 /**
  * Indicadores del mes actual para el tablero del front.
@@ -68,6 +74,8 @@ export class DashboardController {
     private readonly getMonthlyPurchasesByCategory: GetMonthlyPurchasesByCategoryUseCase,
     private readonly getTopPurchasedProductByMonth: GetTopPurchasedProductByMonthUseCase,
     private readonly getYearlyPurchases: GetYearlyPurchasesUseCase,
+    private readonly getProfitability: GetProfitabilityUseCase,
+    private readonly getMonthComparison: GetMonthComparisonUseCase,
   ) {}
 
   @Get('total-sales')
@@ -404,5 +412,25 @@ export class DashboardController {
   async yearlyPurchases(): Promise<YearlyPurchasesResponseDto> {
     const rows = await this.getYearlyPurchases.execute();
     return YearlyPurchasesResponseDto.build(rows);
+  }
+
+  @Get('profitability')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rentabilidad por producto/categoría' })
+  @ApiOkResponse({ type: [ProfitabilityRowDto] })
+  @ApiBadRequestResponse({ type: ApiErrorDto })
+  async profitability(@Query() q: ProfitabilityQueryDto): Promise<ProfitabilityRowDto[]> {
+    const rows = await this.getProfitability.execute(q.dateFrom, q.dateTo);
+    return rows.map(ProfitabilityRowDto.from);
+  }
+
+  @Get('comparison')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Comparativa MoM/YoY para un mes dado' })
+  @ApiOkResponse({ type: MonthComparisonResponseDto })
+  @ApiBadRequestResponse({ type: ApiErrorDto })
+  async comparison(@Query() q: MonthComparisonQueryDto): Promise<MonthComparisonResponseDto> {
+    const m = await this.getMonthComparison.execute(q.year, q.month);
+    return MonthComparisonResponseDto.from(m);
   }
 }

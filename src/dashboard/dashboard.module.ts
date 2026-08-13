@@ -15,6 +15,8 @@ import { GetTotalSalesUseCase } from './application/get-total-sales.use-case';
 import { GetTotalPurchasesUseCase } from './application/get-total-purchases.use-case';
 import { GetYearlySalesUseCase } from './application/get-yearly-sales.use-case';
 import { GetYearlyPurchasesUseCase } from './application/get-yearly-purchases.use-case';
+import { GetProfitabilityUseCase } from './application/get-profitability.use-case';
+import { GetMonthComparisonUseCase } from './application/get-month-comparison.use-case';
 import { DASHBOARD_REPOSITORY } from './domain/dashboard.repository';
 import { DashboardController } from './infrastructure/http/dashboard.controller';
 import { TypeOrmDashboardRepository } from './infrastructure/persistence/typeorm-dashboard.repository';
@@ -49,6 +51,8 @@ import { TypeOrmDashboardRepository } from './infrastructure/persistence/typeorm
     GetMonthlyPurchasesByCategoryUseCase,
     GetTopPurchasedProductByMonthUseCase,
     GetYearlyPurchasesUseCase,
+    GetProfitabilityUseCase,
+    GetMonthComparisonUseCase,
   ],
 })
 export class DashboardModule {}

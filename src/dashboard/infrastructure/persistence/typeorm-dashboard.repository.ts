@@ -3,9 +3,11 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import {
   DashboardRepository,
+  MonthComparison,
   MonthlyAmount,
   MonthlyTopProduct,
   MonthlyTopPurchasedProduct,
+  ProfitabilityRow,
   TopClient,
   TopDepartment,
   TopProduct,
@@ -484,5 +486,101 @@ export class TypeOrmDashboardRepository implements DashboardRepository {
       );
 
     return filas.map((f) => ({ year: f.year, total: f.total }));
+  }
+
+  async profitability(dateFrom?: string, dateTo?: string): Promise<ProfitabilityRow[]> {
+    const params: unknown[] = [];
+    let dateFilter = '';
+    if (dateFrom) { params.push(dateFrom); dateFilter += ` AND s.sale_date >= $${params.length}::date`; }
+    if (dateTo)   { params.push(dateTo);   dateFilter += ` AND s.sale_date <= $${params.length}::date`; }
+
+    const rows: Array<{
+      productId: string; productName: string;
+      categoryId: string; categoryName: string;
+      unitsSold: string; totalRevenue: string;
+      avgCost: string | null; totalCost: string | null; marginPct: string | null;
+    }> = await this.dataSource.query(
+      `SELECT
+         p.product_id        AS "productId",
+         p.product_name      AS "productName",
+         c.category_id       AS "categoryId",
+         c.name              AS "categoryName",
+         SUM(sd.quantity)::int                        AS "unitsSold",
+         ROUND(SUM(sd.quantity * sd.unit_price), 2)::text AS "totalRevenue",
+         ROUND(AVG(pd.unit_price), 4)::text           AS "avgCost",
+         ROUND(SUM(sd.quantity) * AVG(pd.unit_price), 2)::text AS "totalCost",
+         CASE WHEN SUM(sd.quantity * sd.unit_price) > 0
+              THEN ROUND(
+                (1 - (SUM(sd.quantity) * COALESCE(AVG(pd.unit_price),0))
+                   /  SUM(sd.quantity * sd.unit_price)
+                ) * 100, 2)::text
+         END                                           AS "marginPct"
+       FROM sale_details sd
+       JOIN sales        s  ON s.sale_id       = sd.sale_id
+       JOIN products     p  ON p.product_id    = sd.product_id
+       JOIN categories   c  ON c.category_id   = p.category_id
+       LEFT JOIN (
+         SELECT product_id, AVG(unit_price) AS unit_price
+           FROM purchase_details
+          GROUP BY product_id
+       ) pd ON pd.product_id = p.product_id
+       WHERE 1=1${dateFilter}
+       GROUP BY p.product_id, p.product_name, c.category_id, c.name
+       ORDER BY "totalRevenue" DESC NULLS LAST`,
+      params,
+    );
+
+    return rows.map((r) => ({
+      productId:    r.productId,
+      productName:  r.productName,
+      categoryId:   r.categoryId,
+      categoryName: r.categoryName,
+      unitsSold:    Number(r.unitsSold),
+      totalRevenue: r.totalRevenue,
+      avgCost:      r.avgCost   ?? null,
+      totalCost:    r.totalCost ?? null,
+      marginPct:    r.marginPct ?? null,
+    }));
+  }
+
+  async monthComparison(year: number, month: number): Promise<MonthComparison> {
+    const prevMonth     = month === 1 ? 12 : month - 1;
+    const prevMonthYear = month === 1 ? year - 1 : year;
+    const prevYear      = year - 1;
+
+    const [cur, prev, prevYr] = await Promise.all([
+      this.dataSource.query<Array<{ amount: string; count: string }>>(
+        `SELECT COALESCE(SUM(total),0)::text AS amount, COUNT(*)::text AS count
+           FROM sales WHERE EXTRACT(YEAR FROM sale_date)::int = $1 AND EXTRACT(MONTH FROM sale_date)::int = $2`,
+        [year, month],
+      ),
+      this.dataSource.query<Array<{ amount: string; count: string }>>(
+        `SELECT COALESCE(SUM(total),0)::text AS amount, COUNT(*)::text AS count
+           FROM sales WHERE EXTRACT(YEAR FROM sale_date)::int = $1 AND EXTRACT(MONTH FROM sale_date)::int = $2`,
+        [prevMonthYear, prevMonth],
+      ),
+      this.dataSource.query<Array<{ amount: string; count: string }>>(
+        `SELECT COALESCE(SUM(total),0)::text AS amount, COUNT(*)::text AS count
+           FROM sales WHERE EXTRACT(YEAR FROM sale_date)::int = $1 AND EXTRACT(MONTH FROM sale_date)::int = $2`,
+        [prevYear, month],
+      ),
+    ]);
+
+    const curAmt  = parseFloat(cur[0].amount);
+    const prevAmt = parseFloat(prev[0].amount);
+    const pyAmt   = parseFloat(prevYr[0].amount);
+
+    return {
+      year,
+      month,
+      currentAmount:   cur[0].amount,
+      currentCount:    Number(cur[0].count),
+      prevAmount:      prev[0].amount,
+      prevCount:       Number(prev[0].count),
+      prevYearAmount:  prevYr[0].amount,
+      prevYearCount:   Number(prevYr[0].count),
+      momPct:  prevAmt !== 0 ? (((curAmt - prevAmt) / prevAmt) * 100).toFixed(1) : null,
+      yoyPct:  pyAmt   !== 0 ? (((curAmt - pyAmt)   / pyAmt)   * 100).toFixed(1) : null,
+    };
   }
 }
