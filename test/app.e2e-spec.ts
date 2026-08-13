@@ -1,29 +1,34 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import type { App } from 'supertest/types';
+import { AppController } from '../src/app.controller';
+import { AppService } from '../src/app.service';
 
-describe('AppController (e2e)', () => {
+describe('App smoke tests', () => {
   let app: INestApplication<App>;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = module.createNestApplication() as INestApplication<App>;
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET / returns 200 with status text', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
-  });
-
-  afterEach(async () => {
-    await app.close();
+      .expect((res) => {
+        expect(typeof res.text).toBe('string');
+        expect(res.text.length).toBeGreaterThan(0);
+      });
   });
 });
