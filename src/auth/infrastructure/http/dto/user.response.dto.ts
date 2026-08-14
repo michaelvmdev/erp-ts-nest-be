@@ -4,16 +4,18 @@ import { User } from '../../../domain/user';
 export class UserResponseDto {
   @ApiProperty() id!: string;
   @ApiProperty() roleId!: string;
+  @ApiProperty() roleName!: string;
   @ApiProperty() email!: string;
   @ApiProperty() name!: string;
   @ApiProperty() active!: boolean;
   @ApiProperty() createdAt!: Date;
 
-  static fromDomain(user: User): UserResponseDto {
+  static fromDomain(user: User, roleName = ''): UserResponseDto {
     const snap = user.toSnapshot();
     const dto = new UserResponseDto();
     dto.id = snap.id;
     dto.roleId = snap.roleId;
+    dto.roleName = roleName;
     dto.email = snap.email;
     dto.name = snap.name;
     dto.active = snap.active;

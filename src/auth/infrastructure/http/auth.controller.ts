@@ -93,7 +93,7 @@ export class AuthController {
     const payload = (req as Request & { user: JwtPayload }).user;
     const user = await this.users.findById(UserId.of(payload.sub));
     if (!user) throw new Error('User not found');
-    return UserResponseDto.fromDomain(user);
+    return UserResponseDto.fromDomain(user, payload.roleName);
   }
 
   @Post('forgot-password')

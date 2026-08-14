@@ -30,7 +30,7 @@ export class UsersController {
     const l = limit ? Number(limit) : 20;
     const result = await this.users.search({ page: p, limit: l, offset: (p - 1) * l });
     return {
-      items: result.items.map(UserResponseDto.fromDomain),
+      items: result.items.map((u) => UserResponseDto.fromDomain(u)),
       meta: {
         page: result.page,
         limit: result.limit,
