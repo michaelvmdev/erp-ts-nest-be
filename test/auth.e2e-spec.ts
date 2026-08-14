@@ -6,12 +6,19 @@ import type { App } from 'supertest/types';
 import { ForgotPasswordUseCase, PASSWORD_RESET_STORE } from '../src/auth/application/forgot-password.use-case';
 import type { PasswordResetStore, PasswordResetEntry } from '../src/auth/application/forgot-password.use-case';
 import { LoginUseCase } from '../src/auth/application/login.use-case';
+import { RefreshTokenUseCase } from '../src/auth/application/refresh-token.use-case';
 import { RegisterUserUseCase } from '../src/auth/application/register-user.use-case';
 import { ResetPasswordUseCase } from '../src/auth/application/reset-password.use-case';
 import { USER_REPOSITORY } from '../src/auth/domain/user.repository';
 import { JwtGuard } from '../src/auth/infrastructure/guards/jwt.guard';
 import { AuthController } from '../src/auth/infrastructure/http/auth.controller';
+import { ROLE_REPOSITORY } from '../src/auth/domain/role.repository';
 import { MAILER } from '../src/mail/mailer.port';
+
+const mockRoleRepo = {
+  findAll: jest.fn(),
+  findById: jest.fn().mockResolvedValue({ name: 'administrador' }),
+};
 
 const mockUserRepo = {
   findByEmail: jest.fn(),
@@ -41,10 +48,12 @@ async function buildApp(): Promise<INestApplication<App>> {
     providers: [
       RegisterUserUseCase,
       LoginUseCase,
+      RefreshTokenUseCase,
       ForgotPasswordUseCase,
       ResetPasswordUseCase,
       JwtGuard,
       { provide: USER_REPOSITORY, useValue: mockUserRepo },
+      { provide: ROLE_REPOSITORY, useValue: mockRoleRepo },
       { provide: MAILER, useValue: mockMailer },
       { provide: PASSWORD_RESET_STORE, useValue: mockStore },
     ],
