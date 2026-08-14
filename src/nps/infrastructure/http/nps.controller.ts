@@ -22,6 +22,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateNpsSurveyUseCase } from '../../application/create-nps-survey.use-case';
 import { FindNpsSurveyUseCase } from '../../application/find-nps-survey.use-case';
@@ -47,7 +49,8 @@ const UUID_EJEMPLO = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 @ApiTags('nps')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador', 'vendedor')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('nps')
 export class NpsController {
   constructor(

@@ -1,6 +1,8 @@
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { AuditAction } from '../../audit.service';
@@ -18,7 +20,8 @@ export class AuditQueryDto {
 
 @ApiTags('audit')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('audit')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

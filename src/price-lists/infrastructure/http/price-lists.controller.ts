@@ -11,9 +11,11 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -23,6 +25,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreatePriceListUseCase } from '../../application/create-price-list.use-case';
 import { FindPriceListUseCase } from '../../application/find-price-list.use-case';
@@ -42,6 +47,9 @@ import { UpdatePriceListRequestDto } from './dto/update-price-list.request.dto';
 const UUID_EJEMPLO = 'd4000000-0000-4000-8000-000000000001';
 
 @ApiTags('price-lists')
+@ApiBearerAuth()
+@Roles('administrador', 'almacenero', 'contador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('price-lists')
 export class PriceListsController {
   constructor(

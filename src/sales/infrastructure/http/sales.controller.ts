@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -21,6 +23,9 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateSaleUseCase } from '../../application/create-sale.use-case';
 import { FindSaleUseCase } from '../../application/find-sale.use-case';
@@ -79,6 +84,9 @@ import { SalesByClientReportExcelResponseDto } from './dto/sales-by-client-repor
 const UUID_EJEMPLO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 
 @ApiTags('sales')
+@ApiBearerAuth()
+@Roles('administrador', 'vendedor')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('sales')
 export class SalesController {
   constructor(

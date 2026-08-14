@@ -71,6 +71,7 @@ import { TypeOrmSalePrintViewReader } from './infrastructure/persistence/typeorm
 import { TypeOrmSalesByClientReportReader } from './infrastructure/persistence/typeorm-sales-by-client-report.reader';
 import { TypeOrmSalesReportReader } from './infrastructure/persistence/typeorm-sales-report.reader';
 import { TypeOrmSaleRepository } from './infrastructure/persistence/typeorm-sale.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { TypeOrmSaleRepository } from './infrastructure/persistence/typeorm-sale
     ]),
     MailModule,
     StockModule,
+    AuthModule,
   ],
   controllers: [SalesController],
   providers: [

@@ -3,6 +3,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { CreatePaymentUseCase } from '../../application/create-payment.use-case';
 import { DeletePaymentUseCase } from '../../application/delete-payment.use-case';
 import { SearchPaymentsUseCase } from '../../application/search-payments.use-case';
@@ -12,7 +14,8 @@ import { PaginatedPaymentsResponseDto, PaymentResponseDto } from './dto/payment.
 
 @ApiTags('payments')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador', 'contador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('payments')
 export class PaymentsController {
   constructor(

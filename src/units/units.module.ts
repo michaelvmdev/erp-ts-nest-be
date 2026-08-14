@@ -8,9 +8,10 @@ import { UNIT_REPOSITORY } from './domain/unit.repository';
 import { UnitsController } from './infrastructure/http/units.controller';
 import { UnitOrmEntity } from './infrastructure/persistence/unit.orm-entity';
 import { TypeOrmUnitRepository } from './infrastructure/persistence/typeorm-unit.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UnitOrmEntity])],
+  imports: [TypeOrmModule.forFeature([UnitOrmEntity]), AuthModule],
   controllers: [UnitsController],
   providers: [
     TypeOrmUnitRepository,

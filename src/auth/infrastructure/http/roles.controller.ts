@@ -3,11 +3,14 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ROLE_REPOSITORY } from '../../domain/role.repository';
 import type { RoleRepository } from '../../domain/role.repository';
 import { JwtGuard } from '../guards/jwt.guard';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../guards/roles.decorator';
 import { RoleResponseDto } from './dto/role.response.dto';
 
 @ApiTags('roles')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('roles')
 export class RolesController {
   constructor(

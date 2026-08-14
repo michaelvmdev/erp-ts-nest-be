@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -20,6 +22,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateUnitUseCase } from '../../application/create-unit.use-case';
 import { FindUnitUseCase } from '../../application/find-unit.use-case';
@@ -36,6 +41,9 @@ import { UpdateUnitRequestDto } from './dto/update-unit.request.dto';
 const UUID_EJEMPLO = 'a1000000-0000-4000-8000-000000000001';
 
 @ApiTags('units')
+@ApiBearerAuth()
+@Roles('administrador', 'almacenero')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('units')
 export class UnitsController {
   constructor(

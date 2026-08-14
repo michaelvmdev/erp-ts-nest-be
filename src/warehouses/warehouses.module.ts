@@ -8,9 +8,10 @@ import { WAREHOUSE_REPOSITORY } from './domain/warehouse.repository';
 import { WarehousesController } from './infrastructure/http/warehouses.controller';
 import { WarehouseOrmEntity } from './infrastructure/persistence/warehouse.orm-entity';
 import { TypeOrmWarehouseRepository } from './infrastructure/persistence/typeorm-warehouse.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([WarehouseOrmEntity])],
+  imports: [TypeOrmModule.forFeature([WarehouseOrmEntity]), AuthModule],
   controllers: [WarehousesController],
   providers: [
     TypeOrmWarehouseRepository,

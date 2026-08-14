@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -21,6 +23,9 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreatePurchaseUseCase } from '../../application/create-purchase.use-case';
 import { FindPurchaseUseCase } from '../../application/find-purchase.use-case';
@@ -56,6 +61,9 @@ import { PurchasesBySupplierReportExcelResponseDto } from './dto/purchases-by-su
 const UUID_EJEMPLO = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 
 @ApiTags('purchases')
+@ApiBearerAuth()
+@Roles('administrador', 'almacenero')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('purchases')
 export class PurchasesController {
   constructor(

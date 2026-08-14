@@ -10,9 +10,10 @@ import { USER_ECOMMERCE_REPOSITORY } from './domain/user-ecommerce.repository';
 import { UsersEcommerceController } from './infrastructure/http/users-ecommerce.controller';
 import { UserEcommerceOrmEntity } from './infrastructure/persistence/user-ecommerce.orm-entity';
 import { TypeOrmUserEcommerceRepository } from './infrastructure/persistence/typeorm-user-ecommerce.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEcommerceOrmEntity])],
+  imports: [TypeOrmModule.forFeature([UserEcommerceOrmEntity]), AuthModule],
   controllers: [UsersEcommerceController],
   providers: [
     TypeOrmUserEcommerceRepository,

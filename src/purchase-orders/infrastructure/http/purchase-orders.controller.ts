@@ -24,6 +24,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { AuditService } from '../../../audit/audit.service';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreatePurchaseOrderUseCase } from '../../application/create-purchase-order.use-case';
@@ -41,7 +43,8 @@ import { UpdatePurchaseOrderRequestDto } from './dto/update-purchase-order.reque
 
 @ApiTags('purchase-orders')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador', 'almacenero')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('purchase-orders')
 export class PurchaseOrdersController {
   constructor(

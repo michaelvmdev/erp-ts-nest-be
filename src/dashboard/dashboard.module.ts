@@ -20,6 +20,7 @@ import { GetMonthComparisonUseCase } from './application/get-month-comparison.us
 import { DASHBOARD_REPOSITORY } from './domain/dashboard.repository';
 import { DashboardController } from './infrastructure/http/dashboard.controller';
 import { TypeOrmDashboardRepository } from './infrastructure/persistence/typeorm-dashboard.repository';
+import { AuthModule } from '../auth/auth.module';
 
 /**
  * No importa `TypeOrmModule.forFeature`: el repositorio consulta con SQL directo
@@ -28,6 +29,7 @@ import { TypeOrmDashboardRepository } from './infrastructure/persistence/typeorm
  * agregado, solo lee agregaciones.
  */
 @Module({
+  imports: [AuthModule],
   controllers: [DashboardController],
   providers: [
     TypeOrmDashboardRepository,

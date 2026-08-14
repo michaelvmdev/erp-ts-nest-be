@@ -2,6 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { InvalidCredentialsError } from '../domain/user';
+import { RoleId } from '../domain/role';
+import { ROLE_REPOSITORY } from '../domain/role.repository';
+import type { RoleRepository } from '../domain/role.repository';
 import { USER_REPOSITORY } from '../domain/user.repository';
 import type { UserRepository } from '../domain/user.repository';
 
@@ -22,6 +25,7 @@ export interface AuthTokenResponse {
 export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -32,7 +36,10 @@ export class LoginUseCase {
     const valid = await bcrypt.compare(cmd.password, user.passwordHash);
     if (!valid) throw new InvalidCredentialsError();
 
-    const accessPayload = { sub: user.id.value, email: user.email, roleId: user.roleId, type: 'access' };
+    const role = await this.roles.findById(RoleId.of(user.roleId));
+    const roleName = role?.name ?? 'unknown';
+
+    const accessPayload = { sub: user.id.value, email: user.email, roleId: user.roleId, roleName, type: 'access' };
     const accessToken = await this.jwtService.signAsync(accessPayload, { expiresIn: '15m' });
 
     const refreshPayload = { sub: user.id.value, type: 'refresh' };

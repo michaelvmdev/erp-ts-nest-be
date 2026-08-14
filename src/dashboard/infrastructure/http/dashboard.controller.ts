@@ -7,6 +7,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { GetMonthlySalesUseCase } from '../../application/get-monthly-sales.use-case';
 import { GetMonthlySalesByCategoryUseCase } from '../../application/get-monthly-sales-by-category.use-case';
@@ -58,7 +60,8 @@ import { MonthComparisonResponseDto } from './dto/month-comparison.response.dto'
  */
 @ApiTags('dashboard')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador', 'contador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(

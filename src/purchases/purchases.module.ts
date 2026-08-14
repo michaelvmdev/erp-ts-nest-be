@@ -42,6 +42,7 @@ import { PurchasesBySupplierReportPdfGenerator } from './infrastructure/pdf/purc
 import { SupplierPurchasesAmountReportPdfGenerator } from './infrastructure/pdf/supplier-purchases-amount-report-pdf.generator';
 import { SupplierPurchasesAmountReportExcelGenerator } from './infrastructure/excel/supplier-purchases-amount-report-excel.generator';
 import { PurchasesBySupplierReportExcelGenerator } from './infrastructure/excel/purchases-by-supplier-report-excel.generator';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { PurchasesBySupplierReportExcelGenerator } from './infrastructure/excel/
     ]),
     MailModule,
     StockModule,
+    AuthModule,
   ],
   controllers: [PurchasesController],
   providers: [

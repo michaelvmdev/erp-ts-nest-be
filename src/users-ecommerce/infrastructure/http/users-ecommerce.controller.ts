@@ -25,6 +25,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/infrastructure/guards/roles.guard';
+import { Roles } from '../../../auth/infrastructure/guards/roles.decorator';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { CreateUserEcommerceUseCase } from '../../application/create-user-ecommerce.use-case';
 import { DeleteUserEcommerceUseCase } from '../../application/delete-user-ecommerce.use-case';
@@ -44,7 +46,8 @@ const UUID_EJEMPLO = '181e2a56-6b4b-42b1-9e56-5ecf0bbf47b3';
 
 @ApiTags('users-ecommerce')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('users-ecommerce')
 export class UsersEcommerceController {
   constructor(

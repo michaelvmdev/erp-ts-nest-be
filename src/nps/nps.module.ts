@@ -10,9 +10,10 @@ import { NPS_REPOSITORY } from './domain/nps-survey.repository';
 import { NpsController } from './infrastructure/http/nps.controller';
 import { NpsSurveyOrmEntity } from './infrastructure/persistence/nps-survey.orm-entity';
 import { TypeOrmNpsSurveyRepository } from './infrastructure/persistence/typeorm-nps-survey.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([NpsSurveyOrmEntity])],
+  imports: [TypeOrmModule.forFeature([NpsSurveyOrmEntity]), AuthModule],
   controllers: [NpsController],
   providers: [
     TypeOrmNpsSurveyRepository,

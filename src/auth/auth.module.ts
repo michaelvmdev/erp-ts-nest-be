@@ -14,6 +14,7 @@ import { ROLE_REPOSITORY_PROVIDER } from './infrastructure/persistence/typeorm-r
 import { UserOrmEntity } from './infrastructure/persistence/user.orm-entity';
 import { USER_REPOSITORY_PROVIDER } from './infrastructure/persistence/typeorm-user.repository';
 import { JwtGuard } from './infrastructure/guards/jwt.guard';
+import { RolesGuard } from './infrastructure/guards/roles.guard';
 import { AuthController } from './infrastructure/http/auth.controller';
 import { UsersController } from './infrastructure/http/users.controller';
 import { RolesController } from './infrastructure/http/roles.controller';
@@ -43,11 +44,12 @@ import { MailModule } from '../mail/mail.module';
     ForgotPasswordUseCase,
     ResetPasswordUseCase,
     JwtGuard,
+    RolesGuard,
     {
       provide: PASSWORD_RESET_STORE,
       useFactory: () => new Map<string, PasswordResetEntry>(),
     },
   ],
-  exports: [JwtModule, JwtGuard],
+  exports: [JwtModule, JwtGuard, RolesGuard],
 })
 export class AuthModule {}

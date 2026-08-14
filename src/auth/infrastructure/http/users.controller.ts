@@ -4,12 +4,15 @@ import { UpdateUserUseCase } from '../../application/update-user.use-case';
 import { USER_REPOSITORY } from '../../domain/user.repository';
 import type { UserRepository } from '../../domain/user.repository';
 import { JwtGuard } from '../guards/jwt.guard';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../guards/roles.decorator';
 import { UpdateUserRequestDto } from './dto/update-user.request.dto';
 import { PaginatedUsersResponseDto, UserResponseDto } from './dto/user.response.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
-@UseGuards(JwtGuard)
+@Roles('administrador')
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
   constructor(

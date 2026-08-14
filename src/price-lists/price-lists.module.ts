@@ -11,9 +11,10 @@ import { PriceListItemOrmEntity } from './infrastructure/persistence/price-list-
 import { PriceListOrmEntity } from './infrastructure/persistence/price-list.orm-entity';
 import { TypeOrmPriceListRepository } from './infrastructure/persistence/typeorm-price-list.repository';
 import { PriceListsController } from './infrastructure/http/price-lists.controller';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PriceListOrmEntity, PriceListItemOrmEntity])],
+  imports: [TypeOrmModule.forFeature([PriceListOrmEntity, PriceListItemOrmEntity]), AuthModule],
   controllers: [PriceListsController],
   providers: [
     TypeOrmPriceListRepository,
