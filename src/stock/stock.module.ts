@@ -8,10 +8,11 @@ import { STOCK_WRITER } from './domain/stock-writer';
 import { TypeOrmStockRepository } from './infrastructure/persistence/typeorm-stock.repository';
 import { TypeOrmStockWriterRepository } from './infrastructure/persistence/typeorm-stock-writer.repository';
 import { StockController } from './infrastructure/http/stock.controller';
+import { StockSseController } from './infrastructure/http/stock-sse.controller';
 
 @Module({
   imports: [AuthModule],
-  controllers: [StockController],
+  controllers: [StockController, StockSseController],
   providers: [
     TypeOrmStockRepository,
     { provide: STOCK_REPOSITORY, useExisting: TypeOrmStockRepository },

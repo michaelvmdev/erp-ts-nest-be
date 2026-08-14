@@ -113,4 +113,5 @@ export class StockController {
   async alerts() {
     return this.getStockAlerts.execute();
   }
+
 }
