@@ -12,6 +12,7 @@ export interface LoginCommand {
 
 export interface AuthTokenResponse {
   readonly accessToken: string;
+  readonly refreshToken: string;
   readonly userId: string;
   readonly email: string;
   readonly roleId: string;
@@ -31,9 +32,12 @@ export class LoginUseCase {
     const valid = await bcrypt.compare(cmd.password, user.passwordHash);
     if (!valid) throw new InvalidCredentialsError();
 
-    const payload = { sub: user.id.value, email: user.email, roleId: user.roleId };
-    const accessToken = await this.jwtService.signAsync(payload);
+    const accessPayload = { sub: user.id.value, email: user.email, roleId: user.roleId, type: 'access' };
+    const accessToken = await this.jwtService.signAsync(accessPayload, { expiresIn: '15m' });
 
-    return { accessToken, userId: user.id.value, email: user.email, roleId: user.roleId };
+    const refreshPayload = { sub: user.id.value, type: 'refresh' };
+    const refreshToken = await this.jwtService.signAsync(refreshPayload, { expiresIn: '30d' });
+
+    return { accessToken, refreshToken, userId: user.id.value, email: user.email, roleId: user.roleId };
   }
 }

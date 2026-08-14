@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
+import cookieParser from 'cookie-parser';
 import express, { type Request, type Response } from 'express';
 import { AppModule } from './app.module';
 import { ASSETS_DIR } from './shared/infrastructure/assets';
@@ -8,6 +9,8 @@ import { DomainExceptionFilter } from './shared/infrastructure/http/domain-excep
 import { isSwaggerEnabled, setupScalar, setupSwagger } from './swagger';
 
 function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>) {
+  app.use(cookieParser());
+
   app.useGlobalPipes(
     new ValidationPipe({
       // Descarta las propiedades que no estan declaradas en el DTO.

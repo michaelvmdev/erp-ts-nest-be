@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ForgotPasswordUseCase, PASSWORD_RESET_STORE } from './application/forgot-password.use-case';
 import type { PasswordResetEntry } from './application/forgot-password.use-case';
 import { LoginUseCase } from './application/login.use-case';
+import { RefreshTokenUseCase } from './application/refresh-token.use-case';
 import { RegisterUserUseCase } from './application/register-user.use-case';
 import { ResetPasswordUseCase } from './application/reset-password.use-case';
 import { UpdateUserUseCase } from './application/update-user.use-case';
@@ -37,6 +38,7 @@ import { MailModule } from '../mail/mail.module';
     ROLE_REPOSITORY_PROVIDER,
     RegisterUserUseCase,
     LoginUseCase,
+    RefreshTokenUseCase,
     UpdateUserUseCase,
     ForgotPasswordUseCase,
     ResetPasswordUseCase,
