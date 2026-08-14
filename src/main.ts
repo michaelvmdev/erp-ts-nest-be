@@ -3,12 +3,18 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import express, { type Request, type Response } from 'express';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ASSETS_DIR } from './shared/infrastructure/assets';
 import { DomainExceptionFilter } from './shared/infrastructure/http/domain-exception.filter';
 import { isSwaggerEnabled, setupScalar, setupSwagger } from './swagger';
 
 function configureApp(app: Awaited<ReturnType<typeof NestFactory.create>>) {
+  app.use(helmet());
+
+  const allowedOrigin = process.env.FRONTEND_URL ?? 'http://localhost:3001';
+  app.enableCors({ origin: allowedOrigin, credentials: true });
+
   app.use(cookieParser());
 
   app.useGlobalPipes(
