@@ -190,11 +190,11 @@ export class ProductsController {
   @Delete(':productId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Eliminar un producto',
+    summary: 'Eliminar un producto (soft delete)',
     description:
-      'Baja fisica. Si el producto ya aparece en alguna venta la operacion se rechaza con 409, ' +
-      'porque borrarlo dejaria huerfanas esas lineas de detalle. En ese caso corresponde ' +
-      'desactivarlo con PATCH enviando `"productActive": false`.',
+      'Baja logica: el registro se marca con `deleted_at` y deja de aparecer en consultas. ' +
+      'El historial de ventas queda intacto. Para retirar temporalmente un producto de la venta ' +
+      'sin eliminarlo, usa PATCH con `"productActive": false`.',
   })
   @ApiParam({ name: 'productId', format: 'uuid', example: UUID_EJEMPLO })
   @ApiNoContentResponse({

@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'units' })
 export class UnitOrmEntity {
@@ -13,4 +13,7 @@ export class UnitOrmEntity {
 
   @Column({ name: 'unit_active', type: 'boolean', default: true })
   unitActive!: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }

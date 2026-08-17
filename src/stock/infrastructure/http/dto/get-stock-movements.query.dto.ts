@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsDateString, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
-const MOVEMENT_TYPES = ['purchase_in', 'sale_out', 'return_in', 'adjustment'] as const;
+const MOVEMENT_TYPES = ['purchase_in', 'sale_out', 'return_in', 'purchase_return', 'transfer_out', 'transfer_in', 'adjustment'] as const;
 
 export class GetStockMovementsQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })

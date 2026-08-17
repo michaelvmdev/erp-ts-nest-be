@@ -4,24 +4,11 @@ import { Repository } from 'typeorm';
 import { Page } from '../../../shared/domain/pagination';
 import { Supplier } from '../../domain/supplier';
 import { SupplierSearchCriteria } from '../../domain/supplier-search.criteria';
-import { SupplierInUseError } from '../../domain/supplier.errors';
 import { SupplierRepository } from '../../domain/supplier.repository';
 import { SupplierId } from '../../domain/value-objects/supplier-id.value-object';
 import { SupplierRuc } from '../../domain/value-objects/supplier-ruc.value-object';
 import { SupplierMapper } from './supplier.mapper';
 import { SupplierOrmEntity } from './supplier.orm-entity';
-
-/** Violacion de clave foranea en PostgreSQL. */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-
-function esErrorPostgres(error: unknown, codigo: string): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === codigo
-  );
-}
 
 /**
  * Adaptador de salida: implementa el puerto SupplierRepository con TypeORM.
@@ -105,13 +92,6 @@ export class TypeOrmSupplierRepository implements SupplierRepository {
   }
 
   async delete(id: SupplierId): Promise<void> {
-    try {
-      await this.suppliers.delete({ supplierId: id.value });
-    } catch (error) {
-      if (esErrorPostgres(error, PG_FOREIGN_KEY_VIOLATION)) {
-        throw new SupplierInUseError(id.value);
-      }
-      throw error;
-    }
+    await this.suppliers.softDelete({ supplierId: id.value });
   }
 }

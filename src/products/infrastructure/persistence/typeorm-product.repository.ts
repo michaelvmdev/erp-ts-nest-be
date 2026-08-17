@@ -4,7 +4,6 @@ import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Page } from '../../../shared/domain/pagination';
 import { Product } from '../../domain/product';
 import { ProductSearchCriteria } from '../../domain/product-search.criteria';
-import { ProductInUseError } from '../../domain/product.errors';
 import {
   BrandExistenceChecker,
   ProductRepository,
@@ -16,18 +15,6 @@ import {
 import { ProductMapper } from './product.mapper';
 import { BrandOrmEntity } from '../../../brands/infrastructure/persistence/brand.orm-entity';
 import { ProductOrmEntity } from './product.orm-entity';
-
-/** Violacion de clave foranea en PostgreSQL. */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-
-function esErrorPostgres(error: unknown, codigo: string): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === codigo
-  );
-}
 
 /**
  * Adaptador de salida: implementa el puerto ProductRepository con TypeORM.
@@ -125,14 +112,7 @@ export class TypeOrmProductRepository
   }
 
   async delete(id: ProductId): Promise<void> {
-    try {
-      await this.products.delete({ productId: id.value });
-    } catch (error) {
-      if (esErrorPostgres(error, PG_FOREIGN_KEY_VIOLATION)) {
-        throw new ProductInUseError(id.value);
-      }
-      throw error;
-    }
+    await this.products.softDelete({ productId: id.value });
   }
 
   async exists(brandId: BrandId): Promise<boolean> {

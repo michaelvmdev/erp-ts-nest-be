@@ -63,6 +63,7 @@ export class CreateProductUseCase {
       description: ProductDescription.of(command.productDescription),
       image: ProductImage.of(command.productImage),
       unitPrice: Money.fromNumber(command.productUnitPrice),
+      igvRate: command.igvRate,
       active: command.productActive,
     });
 

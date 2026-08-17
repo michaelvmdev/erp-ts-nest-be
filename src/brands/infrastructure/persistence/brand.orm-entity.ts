@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 /**
  * Modelo de persistencia de la tabla `brands`.
@@ -17,4 +17,7 @@ export class BrandOrmEntity {
 
   @Column({ name: 'brand_active', type: 'boolean', default: true })
   brandActive!: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }

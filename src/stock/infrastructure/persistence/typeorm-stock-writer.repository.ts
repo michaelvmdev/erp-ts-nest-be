@@ -18,9 +18,9 @@ export class TypeOrmStockWriterRepository implements StockWriter {
     const placeholders: string[] = [];
 
     movements.forEach((m, i) => {
-      const base = i * 7;
+      const base = i * 8;
       placeholders.push(
-        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`,
+        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8})`,
       );
       values.push(
         randomUUID(),
@@ -30,12 +30,13 @@ export class TypeOrmStockWriterRepository implements StockWriter {
         m.quantity,
         m.unitCost ?? null,
         m.referenceId ?? null,
+        m.lotId ?? null,
       );
     });
 
     await this.ds.query(
       `INSERT INTO stock_movements
-         (movement_id, product_id, warehouse_id, movement_type, quantity, unit_cost, reference_id)
+         (movement_id, product_id, warehouse_id, movement_type, quantity, unit_cost, reference_id, lot_id)
        VALUES ${placeholders.join(', ')}`,
       values,
     );

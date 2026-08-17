@@ -85,6 +85,10 @@ export class UpdateProductUseCase {
       product.reprice(Money.fromNumber(command.productUnitPrice));
     }
 
+    if (command.igvRate !== undefined) {
+      product.setIgvRate(command.igvRate);
+    }
+
     if (command.productActive !== undefined) {
       if (command.productActive) {
         product.activate();

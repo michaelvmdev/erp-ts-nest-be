@@ -1,4 +1,4 @@
-export type StockMovementType = 'purchase_in' | 'sale_out' | 'return_in' | 'adjustment';
+export type StockMovementType = 'purchase_in' | 'sale_out' | 'return_in' | 'purchase_return' | 'transfer_out' | 'transfer_in' | 'adjustment';
 
 export interface StockMovement {
   readonly movementId: string;

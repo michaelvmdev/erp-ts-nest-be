@@ -31,6 +31,18 @@ import { UsersEcommerceModule } from './users-ecommerce/users-ecommerce.module';
 import { ExportsModule } from './exports/exports.module';
 import { SearchModule } from './search/search.module';
 import { AuditModule } from './audit/audit.module';
+import { AccountsModule } from './accounts/accounts.module';
+import { PurchaseReturnsModule } from './purchase-returns/purchase-returns.module';
+import { QuotesModule } from './quotes/quotes.module';
+import { LotsModule } from './lots/lots.module';
+import { JournalModule } from './journal/journal.module';
+import { ReportsModule } from './reports/reports.module';
+import { SunatModule } from './sunat/sunat.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ImportsModule } from './imports/imports.module';
+import { AttachmentsModule } from './attachments/attachments.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { DetraccionesModule } from './detracciones/detracciones.module';
 
 @Module({
   imports: [
@@ -83,6 +95,18 @@ import { AuditModule } from './audit/audit.module';
     ExportsModule,
     SearchModule,
     AuditModule,
+    AccountsModule,
+    PurchaseReturnsModule,
+    QuotesModule,
+    LotsModule,
+    JournalModule,
+    ReportsModule,
+    SunatModule,
+    NotificationsModule,
+    ImportsModule,
+    AttachmentsModule,
+    WebhooksModule,
+    DetraccionesModule,
   ],
   controllers: [AppController],
   providers: [

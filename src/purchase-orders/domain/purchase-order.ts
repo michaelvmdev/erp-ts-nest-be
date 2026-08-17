@@ -6,13 +6,23 @@ import {
 } from './purchase-order.errors';
 import { PurchaseOrderId } from './value-objects/purchase-order-id.value-object';
 
-export type PurchaseOrderStatus = 'pending' | 'partial' | 'received' | 'cancelled';
+export type PurchaseOrderStatus =
+  | 'pending'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'partial'
+  | 'received'
+  | 'cancelled';
 
 const ALLOWED_TRANSITIONS: Record<PurchaseOrderStatus, PurchaseOrderStatus[]> = {
-  pending: ['partial', 'received', 'cancelled'],
-  partial: ['received', 'cancelled'],
-  received: [],
-  cancelled: [],
+  pending:          ['partial', 'received', 'cancelled', 'pending_approval'],
+  pending_approval: ['approved', 'rejected'],
+  approved:         ['partial', 'received', 'cancelled'],
+  rejected:         [],
+  partial:          ['received', 'cancelled'],
+  received:         [],
+  cancelled:        [],
 };
 
 export interface PurchaseOrderSnapshot {

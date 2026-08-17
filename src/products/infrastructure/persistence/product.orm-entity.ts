@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { BrandOrmEntity } from '../../../brands/infrastructure/persistence/brand.orm-entity';
 import { CategoryOrmEntity } from '../../../categories/infrastructure/persistence/category.orm-entity';
 
@@ -64,6 +64,12 @@ export class ProductOrmEntity {
 
   @Column({ name: 'minimum_stock', type: 'int', default: 0 })
   minimumStock!: number;
+
+  @Column({ name: 'igv_rate', type: 'numeric', precision: 5, scale: 4, default: 0.18 })
+  igvRate!: string;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 
   @ManyToOne(() => BrandOrmEntity, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'brand_id', referencedColumnName: 'brandId' })

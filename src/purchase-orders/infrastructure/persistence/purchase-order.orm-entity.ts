@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 import type { PurchaseOrderStatus } from '../../domain/purchase-order';
 
 @Entity({ name: 'purchase_orders' })
@@ -26,6 +26,9 @@ export class PurchaseOrderOrmEntity {
 
   @Column({ name: 'notes', type: 'varchar', length: 500, nullable: true })
   notes!: string | null;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }
 
 @Entity({ name: 'purchase_order_details' })

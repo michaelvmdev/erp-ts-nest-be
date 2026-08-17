@@ -19,6 +19,7 @@ export interface ProductSnapshot {
   readonly description: string | null;
   readonly image: string | null;
   readonly unitPrice: Money;
+  readonly igvRate: number;
   readonly active: boolean;
 }
 
@@ -46,6 +47,7 @@ export class Product {
     private _description: ProductDescription,
     private _image: ProductImage,
     private _unitPrice: Money,
+    private _igvRate: number,
     private _active: boolean,
   ) {}
 
@@ -58,6 +60,7 @@ export class Product {
     description: ProductDescription;
     image: ProductImage;
     unitPrice: Money;
+    igvRate?: number;
     active?: boolean;
   }): Product {
     return new Product(
@@ -68,6 +71,7 @@ export class Product {
       params.description,
       params.image,
       params.unitPrice,
+      params.igvRate ?? 0.18,
       params.active ?? true,
     );
   }
@@ -87,6 +91,7 @@ export class Product {
     description: ProductDescription;
     image: ProductImage;
     unitPrice: Money;
+    igvRate?: number;
     active: boolean;
   }): Product {
     return new Product(
@@ -97,6 +102,7 @@ export class Product {
       params.description,
       params.image,
       params.unitPrice,
+      params.igvRate ?? 0.18,
       params.active,
     );
   }
@@ -129,6 +135,10 @@ export class Product {
     return this._unitPrice;
   }
 
+  get igvRate(): number {
+    return this._igvRate;
+  }
+
   get isActive(): boolean {
     return this._active;
   }
@@ -157,6 +167,10 @@ export class Product {
     this._categoryId = categoryId;
   }
 
+  setIgvRate(rate: number): void {
+    this._igvRate = rate;
+  }
+
   activate(): void {
     this._active = true;
   }
@@ -174,6 +188,7 @@ export class Product {
       description: this._description.value,
       image: this._image.value,
       unitPrice: this._unitPrice,
+      igvRate: this._igvRate,
       active: this._active,
     };
   }

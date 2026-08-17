@@ -54,6 +54,14 @@ export class ProductResponseDto {
   productUnitPrice!: number;
 
   @ApiProperty({
+    type: 'number',
+    format: 'double',
+    example: 0.18,
+    description: 'Tasa de IGV aplicable al producto (0.18 = 18 %).',
+  })
+  igvRate!: number;
+
+  @ApiProperty({
     example: true,
     description:
       'Un producto inactivo no se ofrece a la venta, pero conserva su historial.',
@@ -71,6 +79,7 @@ export class ProductResponseDto {
     dto.productDescription = s.description;
     dto.productImage = s.image;
     dto.productUnitPrice = s.unitPrice.toNumber();
+    dto.igvRate = s.igvRate;
     dto.productActive = s.active;
     return dto;
   }

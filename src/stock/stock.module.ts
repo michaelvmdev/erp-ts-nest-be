@@ -3,6 +3,7 @@ import { AuthModule } from '../auth/auth.module';
 import { GetStockAlertsUseCase } from './application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from './application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from './application/get-stock-movements.use-case';
+import { TransferStockUseCase } from './application/transfer-stock.use-case';
 import { STOCK_REPOSITORY } from './domain/stock.repository';
 import { STOCK_WRITER } from './domain/stock-writer';
 import { TypeOrmStockRepository } from './infrastructure/persistence/typeorm-stock.repository';
@@ -21,6 +22,7 @@ import { StockSseController } from './infrastructure/http/stock-sse.controller';
     GetStockLevelsUseCase,
     GetStockMovementsUseCase,
     GetStockAlertsUseCase,
+    TransferStockUseCase,
   ],
   exports: [STOCK_WRITER],
 })

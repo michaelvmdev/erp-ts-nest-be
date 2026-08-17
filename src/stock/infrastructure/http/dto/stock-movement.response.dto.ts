@@ -18,7 +18,7 @@ export class StockMovementResponseDto {
   @ApiProperty({ example: 'ALM-001' })
   warehouseCode!: string;
 
-  @ApiProperty({ enum: ['purchase_in', 'sale_out', 'return_in', 'adjustment'] })
+  @ApiProperty({ enum: ['purchase_in', 'sale_out', 'return_in', 'purchase_return', 'transfer_out', 'transfer_in', 'adjustment'] })
   movementType!: string;
 
   @ApiProperty({ example: 10.5 })

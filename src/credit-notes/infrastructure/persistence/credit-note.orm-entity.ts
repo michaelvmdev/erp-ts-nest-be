@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'credit_notes' })
 export class CreditNoteOrmEntity {
@@ -28,6 +28,9 @@ export class CreditNoteOrmEntity {
 
   @Column({ name: 'total', type: 'numeric', precision: 12, scale: 2 })
   total!: string;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }
 
 @Entity({ name: 'credit_note_details' })

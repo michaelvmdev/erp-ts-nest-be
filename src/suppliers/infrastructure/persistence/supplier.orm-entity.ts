@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 /**
  * Modelo de persistencia de la tabla `suppliers`.
@@ -20,4 +20,7 @@ export class SupplierOrmEntity {
 
   @Column({ name: 'supplier_active', type: 'boolean', default: true })
   supplierActive!: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }

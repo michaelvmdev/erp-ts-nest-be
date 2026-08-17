@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'clients' })
 export class ClientOrmEntity {
@@ -16,4 +16,7 @@ export class ClientOrmEntity {
 
   @Column({ name: 'client_active', type: 'boolean', default: true })
   clientActive!: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }

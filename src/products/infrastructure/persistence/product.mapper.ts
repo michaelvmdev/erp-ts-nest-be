@@ -29,6 +29,7 @@ export class ProductMapper {
       image: ProductImage.of(row.productImage),
       // fromDecimalString y no fromNumber: la fila trae "4899.00" como texto.
       unitPrice: Money.fromDecimalString(row.productUnitPrice),
+      igvRate: parseFloat(row.igvRate),
       active: row.productActive,
     });
   }
@@ -44,6 +45,7 @@ export class ProductMapper {
     row.productDescription = snapshot.description;
     row.productImage = snapshot.image;
     row.productUnitPrice = snapshot.unitPrice.toDecimalString();
+    row.igvRate = snapshot.igvRate.toFixed(4);
     row.productActive = snapshot.active;
     return row;
   }

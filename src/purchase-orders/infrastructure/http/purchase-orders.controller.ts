@@ -120,4 +120,52 @@ export class PurchaseOrdersController {
     void this.audit.log('purchase_order', id, 'UPDATE', req.user?.email ?? 'system', { status: dto.status, notes: dto.notes });
     return PurchaseOrderResponseDto.fromDomain(order);
   }
+
+  @Patch(':id/submit-for-approval')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enviar orden a aprobación' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PurchaseOrderResponseDto })
+  @ApiNotFoundResponse({ type: ApiErrorDto })
+  async submitForApproval(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @Req() req: any,
+  ): Promise<PurchaseOrderResponseDto> {
+    const order = await this.updateOrder.execute(id, { status: 'pending_approval' });
+    void this.audit.log('purchase_order', id, 'UPDATE', req.user?.email ?? 'system', { status: 'pending_approval' });
+    return PurchaseOrderResponseDto.fromDomain(order);
+  }
+
+  @Patch(':id/approve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Aprobar orden de compra' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PurchaseOrderResponseDto })
+  @ApiNotFoundResponse({ type: ApiErrorDto })
+  async approve(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @Req() req: any,
+  ): Promise<PurchaseOrderResponseDto> {
+    const order = await this.updateOrder.execute(id, { status: 'approved' });
+    void this.audit.log('purchase_order', id, 'UPDATE', req.user?.email ?? 'system', { status: 'approved', approvedBy: req.user?.email });
+    return PurchaseOrderResponseDto.fromDomain(order);
+  }
+
+  @Patch(':id/reject')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rechazar orden de compra' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PurchaseOrderResponseDto })
+  @ApiNotFoundResponse({ type: ApiErrorDto })
+  async reject(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @Req() req: any,
+  ): Promise<PurchaseOrderResponseDto> {
+    const order = await this.updateOrder.execute(id, { status: 'rejected' });
+    void this.audit.log('purchase_order', id, 'UPDATE', req.user?.email ?? 'system', { status: 'rejected', rejectedBy: req.user?.email });
+    return PurchaseOrderResponseDto.fromDomain(order);
+  }
 }

@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 /**
  * Modelo de persistencia de la tabla `categories`.
@@ -17,4 +17,7 @@ export class CategoryOrmEntity {
 
   @Column({ name: 'category_active', type: 'boolean', default: true })
   categoryActive!: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }

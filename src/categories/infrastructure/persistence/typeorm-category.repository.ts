@@ -4,24 +4,11 @@ import { Repository } from 'typeorm';
 import { Page } from '../../../shared/domain/pagination';
 import { Category } from '../../domain/category';
 import { CategorySearchCriteria } from '../../domain/category-search.criteria';
-import { CategoryInUseError } from '../../domain/category.errors';
 import { CategoryRepository } from '../../domain/category.repository';
 import { CategoryDescription } from '../../domain/value-objects/category-description.value-object';
 import { CategoryId } from '../../domain/value-objects/category-id.value-object';
 import { CategoryMapper } from './category.mapper';
 import { CategoryOrmEntity } from './category.orm-entity';
-
-/** Violacion de clave foranea en PostgreSQL. */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-
-function esErrorPostgres(error: unknown, codigo: string): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === codigo
-  );
-}
 
 /**
  * Adaptador de salida: implementa el puerto CategoryRepository con TypeORM.
@@ -104,13 +91,6 @@ export class TypeOrmCategoryRepository implements CategoryRepository {
   }
 
   async delete(id: CategoryId): Promise<void> {
-    try {
-      await this.categories.delete({ categoryId: id.value });
-    } catch (error) {
-      if (esErrorPostgres(error, PG_FOREIGN_KEY_VIOLATION)) {
-        throw new CategoryInUseError(id.value);
-      }
-      throw error;
-    }
+    await this.categories.softDelete({ categoryId: id.value });
   }
 }

@@ -4,24 +4,11 @@ import { Repository } from 'typeorm';
 import { Page } from '../../../shared/domain/pagination';
 import { Brand } from '../../domain/brand';
 import { BrandSearchCriteria } from '../../domain/brand-search.criteria';
-import { BrandInUseError } from '../../domain/brand.errors';
 import { BrandRepository } from '../../domain/brand.repository';
 import { BrandDescription } from '../../domain/value-objects/brand-description.value-object';
 import { BrandId } from '../../domain/value-objects/brand-id.value-object';
 import { BrandMapper } from './brand.mapper';
 import { BrandOrmEntity } from './brand.orm-entity';
-
-/** Violacion de clave foranea en PostgreSQL. */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-
-function esErrorPostgres(error: unknown, codigo: string): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === codigo
-  );
-}
 
 @Injectable()
 export class TypeOrmBrandRepository implements BrandRepository {
@@ -95,13 +82,6 @@ export class TypeOrmBrandRepository implements BrandRepository {
   }
 
   async delete(id: BrandId): Promise<void> {
-    try {
-      await this.brands.delete({ brandId: id.value });
-    } catch (error) {
-      if (esErrorPostgres(error, PG_FOREIGN_KEY_VIOLATION)) {
-        throw new BrandInUseError(id.value);
-      }
-      throw error;
-    }
+    await this.brands.softDelete({ brandId: id.value });
   }
 }

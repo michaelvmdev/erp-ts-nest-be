@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -11,8 +12,10 @@ import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
 import { GetStockAlertsUseCase } from '../../application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from '../../application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from '../../application/get-stock-movements.use-case';
+import { TransferStockUseCase } from '../../application/transfer-stock.use-case';
 import { GetStockLevelsQueryDto } from './dto/get-stock-levels.query.dto';
 import { GetStockMovementsQueryDto } from './dto/get-stock-movements.query.dto';
+import { TransferStockRequestDto } from './dto/transfer-stock.request.dto';
 import {
   PaginatedStockLevelsResponseDto,
   StockLevelResponseDto,
@@ -31,6 +34,7 @@ export class StockController {
     private readonly getStockLevels: GetStockLevelsUseCase,
     private readonly getStockMovements: GetStockMovementsUseCase,
     private readonly getStockAlerts: GetStockAlertsUseCase,
+    private readonly transferStock: TransferStockUseCase,
   ) {}
 
   @Get()
@@ -112,6 +116,25 @@ export class StockController {
   @ApiOkResponse({ description: 'Lista de productos con stock insuficiente.' })
   async alerts() {
     return this.getStockAlerts.execute();
+  }
+
+  @Post('transfer')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Transferencia entre almacenes',
+    description:
+      'Genera un movimiento transfer_out en el almacen de origen y un transfer_in en el destino.',
+  })
+  @ApiNoContentResponse({ description: 'Transferencia registrada correctamente.' })
+  @ApiBadRequestResponse({ type: ApiErrorDto })
+  async transfer(@Body() dto: TransferStockRequestDto): Promise<void> {
+    await this.transferStock.execute({
+      productId: dto.productId,
+      sourceWarehouseId: dto.sourceWarehouseId,
+      destinationWarehouseId: dto.destinationWarehouseId,
+      quantity: dto.quantity,
+      notes: dto.notes,
+    });
   }
 
 }

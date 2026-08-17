@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'warehouses' })
 export class WarehouseOrmEntity {
@@ -13,4 +13,7 @@ export class WarehouseOrmEntity {
 
   @Column({ name: 'warehouse_active', type: 'boolean', default: true })
   warehouseActive!: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 }

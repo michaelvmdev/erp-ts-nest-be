@@ -17,6 +17,7 @@ export interface CreateProductCommand {
   readonly productDescription?: string | null;
   readonly productImage?: string | null;
   readonly productUnitPrice: number;
+  readonly igvRate?: number;
   readonly productActive?: boolean;
 }
 
@@ -27,6 +28,7 @@ export interface UpdateProductCommand {
   readonly productDescription?: string | null;
   readonly productImage?: string | null;
   readonly productUnitPrice?: number;
+  readonly igvRate?: number;
   readonly productActive?: boolean;
 }
 

@@ -95,6 +95,24 @@ export class CreateProductRequestDto {
   productUnitPrice!: number;
 
   @ApiPropertyOptional({
+    type: 'number',
+    format: 'double',
+    minimum: 0,
+    maximum: 1,
+    default: 0.18,
+    example: 0.18,
+    description: 'Tasa de IGV (0.18 = 18 %). Si se omite, se usa 0.18.',
+  })
+  @IsOptional()
+  @IsNumber(
+    { maxDecimalPlaces: 4, allowNaN: false, allowInfinity: false },
+    { message: 'igvRate debe ser un numero con hasta 4 decimales.' },
+  )
+  @Min(0, { message: 'igvRate no puede ser negativo.' })
+  @Max(1, { message: 'igvRate no puede superar 1 (100 %).' })
+  igvRate?: number;
+
+  @ApiPropertyOptional({
     default: true,
     example: true,
     description: 'Si se omite, el producto se crea activo.',

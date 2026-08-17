@@ -6,7 +6,6 @@ import { DocumentTypeId } from '../../../document-types/domain/document-type-id.
 import { Page } from '../../../shared/domain/pagination';
 import { Client } from '../../domain/client';
 import { ClientSearchCriteria } from '../../domain/client-search.criteria';
-import { ClientInUseError } from '../../domain/client.errors';
 import {
   ClientRepository,
   DocumentTypeExistenceChecker,
@@ -14,18 +13,6 @@ import {
 import { ClientId } from '../../domain/value-objects/client-id.value-object';
 import { ClientMapper } from './client.mapper';
 import { ClientOrmEntity } from './client.orm-entity';
-
-/** Violacion de clave foranea en PostgreSQL. */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-
-function esErrorPostgres(error: unknown, codigo: string): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === codigo
-  );
-}
 
 @Injectable()
 export class TypeOrmClientRepository
@@ -116,14 +103,7 @@ export class TypeOrmClientRepository
   }
 
   async delete(id: ClientId): Promise<void> {
-    try {
-      await this.clients.delete({ clientId: id.value });
-    } catch (error) {
-      if (esErrorPostgres(error, PG_FOREIGN_KEY_VIOLATION)) {
-        throw new ClientInUseError(id.value);
-      }
-      throw error;
-    }
+    await this.clients.softDelete({ clientId: id.value });
   }
 
   async exists(documentTypeId: DocumentTypeId): Promise<boolean> {
