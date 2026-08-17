@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { JournalEntry, JournalEntryId } from '../domain/journal-entry';
 import { JournalEntryNotFoundError } from '../domain/journal.errors';
-import { JOURNAL_REPOSITORY, JournalRepository } from '../domain/journal.repository';
+import { JOURNAL_REPOSITORY } from '../domain/journal.repository';
+import type { JournalRepository } from '../domain/journal.repository';
 
 @Injectable()
 export class FindJournalEntryUseCase {

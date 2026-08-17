@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { Money } from '../../shared/domain/money.value-object';
 import { JournalEntry, JournalEntryId, JournalReferenceType } from '../domain/journal-entry';
 import { JournalLine } from '../domain/journal-line';
-import { JOURNAL_REPOSITORY, JournalRepository } from '../domain/journal.repository';
+import { JOURNAL_REPOSITORY } from '../domain/journal.repository';
+import type { JournalRepository } from '../domain/journal.repository';
 
 export interface CreateJournalLineCommand {
   accountCode: string;

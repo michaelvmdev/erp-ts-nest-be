@@ -22,7 +22,7 @@ function toStr(v: ExcelJS.CellValue): string {
 
 async function parseWorkbook(buffer: Buffer): Promise<ExcelJS.Row[]> {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buffer);
+  await wb.xlsx.load(buffer as any);
   const ws = wb.worksheets[0];
   if (!ws) throw new Error('El archivo no contiene hojas.');
   const rows: ExcelJS.Row[] = [];
