@@ -43,6 +43,9 @@ import { ImportsModule } from './imports/imports.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { DetraccionesModule } from './detracciones/detracciones.module';
+import { TesoreriaModule } from './tesoreria/tesoreria.module';
+import { ActivosFijosModule } from './activos-fijos/activos-fijos.module';
+import { RrhhModule } from './rrhh/rrhh.module';
 
 @Module({
   imports: [
@@ -107,6 +110,9 @@ import { DetraccionesModule } from './detracciones/detracciones.module';
     AttachmentsModule,
     WebhooksModule,
     DetraccionesModule,
+    TesoreriaModule,
+    ActivosFijosModule,
+    RrhhModule,
   ],
   controllers: [AppController],
   providers: [
