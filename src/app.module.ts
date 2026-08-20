@@ -47,6 +47,7 @@ import { TesoreriaModule } from './tesoreria/tesoreria.module';
 import { ActivosFijosModule } from './activos-fijos/activos-fijos.module';
 import { RrhhModule } from './rrhh/rrhh.module';
 import { CrmModule } from './crm/crm.module';
+import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
 
 @Module({
   imports: [
@@ -115,6 +116,7 @@ import { CrmModule } from './crm/crm.module';
     ActivosFijosModule,
     RrhhModule,
     CrmModule,
+    ExchangeRatesModule,
   ],
   controllers: [AppController],
   providers: [
