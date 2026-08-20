@@ -48,6 +48,12 @@ import { ActivosFijosModule } from './activos-fijos/activos-fijos.module';
 import { RrhhModule } from './rrhh/rrhh.module';
 import { CrmModule } from './crm/crm.module';
 import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
+import { PosModule } from './pos/pos.module';
+import { ProjectsModule } from './projects/projects.module';
+import { ContractsModule } from './contracts/contracts.module';
+import { RecurringBillingModule } from './recurring-billing/recurring-billing.module';
+import { ClientPortalModule } from './client-portal/client-portal.module';
+import { CompaniesModule } from './companies/companies.module';
 
 @Module({
   imports: [
@@ -117,6 +123,12 @@ import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
     RrhhModule,
     CrmModule,
     ExchangeRatesModule,
+    PosModule,
+    ProjectsModule,
+    ContractsModule,
+    RecurringBillingModule,
+    ClientPortalModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [
