@@ -46,6 +46,7 @@ import { DetraccionesModule } from './detracciones/detracciones.module';
 import { TesoreriaModule } from './tesoreria/tesoreria.module';
 import { ActivosFijosModule } from './activos-fijos/activos-fijos.module';
 import { RrhhModule } from './rrhh/rrhh.module';
+import { CrmModule } from './crm/crm.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { RrhhModule } from './rrhh/rrhh.module';
     TesoreriaModule,
     ActivosFijosModule,
     RrhhModule,
+    CrmModule,
   ],
   controllers: [AppController],
   providers: [
