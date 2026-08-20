@@ -1,37 +1,37 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+﻿import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('pos_sessions')
 export class PosSessionEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'session_id' })
-  sessionId: string;
+  sessionId!: string;
 
   @Column({ name: 'cashier_email', length: 200 })
-  cashierEmail: string;
+  cashierEmail!: string;
 
-  @Column({ name: 'cashier_name', nullable: true, length: 200 })
-  cashierName: string | null;
+  @Column({ name: 'cashier_name', nullable: true, type: 'varchar', length: 200 })
+  cashierName!: string | null;
 
   @Column({ name: 'opening_amount', type: 'numeric', precision: 14, scale: 2, default: 0 })
-  openingAmount: string;
+  openingAmount!: string;
 
   @Column({ name: 'closing_amount', type: 'numeric', precision: 14, scale: 2, nullable: true })
-  closingAmount: string | null;
+  closingAmount!: string | null;
 
   @Column({ name: 'total_sales', type: 'numeric', precision: 14, scale: 2, default: 0 })
-  totalSales: string;
+  totalSales!: string;
 
   @Column({ name: 'sales_count', type: 'int', default: 0 })
-  salesCount: number;
+  salesCount!: number;
 
   @Column({ length: 20, default: 'open' })
-  status: string;
+  status!: string;
 
   @Column({ name: 'opened_at', type: 'timestamptz', default: () => 'now()' })
-  openedAt: Date;
+  openedAt!: Date;
 
   @Column({ name: 'closed_at', type: 'timestamptz', nullable: true })
-  closedAt: Date | null;
+  closedAt!: Date | null;
 
   @Column({ type: 'text', nullable: true })
-  notes: string | null;
+  notes!: string | null;
 }

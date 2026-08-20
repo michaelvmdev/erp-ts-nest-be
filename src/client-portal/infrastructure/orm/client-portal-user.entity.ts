@@ -1,28 +1,28 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+﻿import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('client_portal_users')
 export class ClientPortalUserEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'portal_user_id' })
-  portalUserId: string;
+  portalUserId!: string;
 
   @Column({ name: 'client_id', type: 'uuid' })
-  clientId: string;
+  clientId!: string;
 
   @Column({ length: 200, unique: true })
-  email: string;
+  email!: string;
 
   @Column({ name: 'password_hash', length: 200 })
-  passwordHash: string;
+  passwordHash!: string;
 
   @Column({ name: 'is_active', default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
-  lastLoginAt: Date | null;
+  lastLoginAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Column, CreateDateColumn, DeleteDateColumn, Entity,
   OneToMany, PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
@@ -7,47 +7,47 @@ import { CrmActivityEntity } from './crm-activity.entity';
 @Entity('crm_leads')
 export class CrmLeadEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'lead_id' })
-  leadId: string;
+  leadId!: string;
 
   @Column({ name: 'full_name', length: 200 })
-  fullName: string;
+  fullName!: string;
 
-  @Column({ nullable: true, length: 200 })
-  company: string | null;
+  @Column({ nullable: true, type: 'varchar', length: 200 })
+  company!: string | null;
 
-  @Column({ nullable: true, length: 200 })
-  email: string | null;
+  @Column({ nullable: true, type: 'varchar', length: 200 })
+  email!: string | null;
 
-  @Column({ nullable: true, length: 50 })
-  phone: string | null;
+  @Column({ nullable: true, type: 'varchar', length: 50 })
+  phone!: string | null;
 
-  @Column({ nullable: true, length: 100 })
-  source: string | null;
+  @Column({ nullable: true, type: 'varchar', length: 100 })
+  source!: string | null;
 
   @Column({ length: 50, default: 'new' })
-  status: string;
+  status!: string;
 
   @Column({ name: 'estimated_value', type: 'numeric', precision: 14, scale: 2, default: 0 })
-  estimatedValue: string;
+  estimatedValue!: string;
 
   @Column({ type: 'text', nullable: true })
-  notes: string | null;
+  notes!: string | null;
 
-  @Column({ name: 'assigned_to', nullable: true, length: 200 })
-  assignedTo: string | null;
+  @Column({ name: 'assigned_to', nullable: true, type: 'varchar', length: 200 })
+  assignedTo!: string | null;
 
   @Column({ name: 'client_id', nullable: true, type: 'uuid' })
-  clientId: string | null;
+  clientId!: string | null;
 
   @OneToMany(() => CrmActivityEntity, (a) => a.lead)
-  activities: CrmActivityEntity[];
+  activities!: CrmActivityEntity[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
-  deletedAt: Date | null;
+  deletedAt!: Date | null;
 }

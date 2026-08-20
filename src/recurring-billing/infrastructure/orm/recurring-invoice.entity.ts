@@ -1,4 +1,4 @@
-import {
+﻿import {
   Column, CreateDateColumn, Entity, OneToMany,
   PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
@@ -7,47 +7,47 @@ import { RecurringInvoiceItemEntity } from './recurring-invoice-item.entity';
 @Entity('recurring_invoices')
 export class RecurringInvoiceEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'recurring_id' })
-  recurringId: string;
+  recurringId!: string;
 
   @Column({ name: 'client_id', type: 'uuid' })
-  clientId: string;
+  clientId!: string;
 
   @Column({ length: 300 })
-  description: string;
+  description!: string;
 
   @Column({ length: 50 })
-  frequency: string;
+  frequency!: string;
 
   @Column({ name: 'next_billing_date', type: 'date' })
-  nextBillingDate: string;
+  nextBillingDate!: string;
 
   @Column({ name: 'last_billed_date', type: 'date', nullable: true })
-  lastBilledDate: string | null;
+  lastBilledDate!: string | null;
 
   @Column({ name: 'sub_total', type: 'numeric', precision: 14, scale: 2, default: 0 })
-  subTotal: string;
+  subTotal!: string;
 
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
-  igv: string;
+  igv!: string;
 
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
-  total: string;
+  total!: string;
 
   @Column({ length: 50, default: 'active' })
-  status: string;
+  status!: string;
 
   @Column({ type: 'text', nullable: true })
-  notes: string | null;
+  notes!: string | null;
 
-  @Column({ name: 'created_by', nullable: true, length: 200 })
-  createdBy: string | null;
+  @Column({ name: 'created_by', nullable: true, type: 'varchar', length: 200 })
+  createdBy!: string | null;
 
   @OneToMany(() => RecurringInvoiceItemEntity, (i) => i.recurringInvoice)
-  items: RecurringInvoiceItemEntity[];
+  items!: RecurringInvoiceItemEntity[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

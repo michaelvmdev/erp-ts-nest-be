@@ -1,4 +1,4 @@
-import {
+﻿import {
   Column, CreateDateColumn, DeleteDateColumn, Entity,
   OneToMany, PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
@@ -8,44 +8,44 @@ import { ProjectExpenseEntity } from './project-expense.entity';
 @Entity('projects')
 export class ProjectEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'project_id' })
-  projectId: string;
+  projectId!: string;
 
   @Column({ name: 'project_name', length: 300 })
-  projectName: string;
+  projectName!: string;
 
   @Column({ name: 'client_id', type: 'uuid', nullable: true })
-  clientId: string | null;
+  clientId!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   @Column({ type: 'numeric', precision: 14, scale: 2, default: 0 })
-  budget: string;
+  budget!: string;
 
   @Column({ name: 'start_date', type: 'date', nullable: true })
-  startDate: string | null;
+  startDate!: string | null;
 
   @Column({ name: 'end_date', type: 'date', nullable: true })
-  endDate: string | null;
+  endDate!: string | null;
 
   @Column({ length: 50, default: 'planning' })
-  status: string;
+  status!: string;
 
-  @Column({ name: 'created_by', nullable: true, length: 200 })
-  createdBy: string | null;
+  @Column({ name: 'created_by', nullable: true, type: 'varchar', length: 200 })
+  createdBy!: string | null;
 
   @OneToMany(() => ProjectTaskEntity, (t) => t.project)
-  tasks: ProjectTaskEntity[];
+  tasks!: ProjectTaskEntity[];
 
   @OneToMany(() => ProjectExpenseEntity, (e) => e.project)
-  expenses: ProjectExpenseEntity[];
+  expenses!: ProjectExpenseEntity[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
-  deletedAt: Date | null;
+  deletedAt!: Date | null;
 }

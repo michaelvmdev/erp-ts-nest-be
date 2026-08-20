@@ -123,14 +123,14 @@ export class PosController {
   async searchProducts(@Query('search') search?: string) {
     const like = `%${search ?? ''}%`;
     return this.ds.query(
-      `SELECT p.product_id, p.product_code, p.product_description, p.sale_price,
+      `SELECT p.product_id, p.product_name, p.product_description, p.product_unit_price AS sale_price,
               COALESCE(SUM(sm.quantity),0)::NUMERIC AS stock
          FROM products p
          LEFT JOIN stock_movements sm ON sm.product_id = p.product_id
-        WHERE p.deleted_at IS NULL
-          AND (p.product_description ILIKE $1 OR p.product_code ILIKE $1)
+        WHERE p.product_active = true AND p.deleted_at IS NULL
+          AND (p.product_name ILIKE $1 OR p.product_description ILIKE $1)
         GROUP BY p.product_id
-        ORDER BY p.product_description
+        ORDER BY p.product_name
         LIMIT 30`,
       [like],
     );
