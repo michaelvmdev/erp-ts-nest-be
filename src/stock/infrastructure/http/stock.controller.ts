@@ -13,6 +13,8 @@ import { GetStockAlertsUseCase } from '../../application/get-stock-alerts.use-ca
 import { GetStockLevelsUseCase } from '../../application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from '../../application/get-stock-movements.use-case';
 import { TransferStockUseCase } from '../../application/transfer-stock.use-case';
+import { NotifyStockAlertsUseCase } from '../../application/notify-stock-alerts.use-case';
+import { GeneratePosUseCase } from '../../application/generate-pos.use-case';
 import { GetStockLevelsQueryDto } from './dto/get-stock-levels.query.dto';
 import { GetStockMovementsQueryDto } from './dto/get-stock-movements.query.dto';
 import { TransferStockRequestDto } from './dto/transfer-stock.request.dto';
@@ -35,6 +37,8 @@ export class StockController {
     private readonly getStockMovements: GetStockMovementsUseCase,
     private readonly getStockAlerts: GetStockAlertsUseCase,
     private readonly transferStock: TransferStockUseCase,
+    private readonly notifyAlerts: NotifyStockAlertsUseCase,
+    private readonly generatePos: GeneratePosUseCase,
   ) {}
 
   @Get()
@@ -135,6 +139,30 @@ export class StockController {
       quantity: dto.quantity,
       notes: dto.notes,
     });
+  }
+
+  @Post('alerts/notify')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Enviar notificaciones de stock bajo mínimo',
+    description: 'Comprueba todos los productos bajo mínimo y genera una notificación por usuario activo.',
+  })
+  @ApiNoContentResponse({ description: 'Notificaciones enviadas.' })
+  async notifyStockAlerts(): Promise<void> {
+    await this.notifyAlerts.execute();
+  }
+
+  @Post('alerts/generate-pos')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generar órdenes de compra sugeridas por alertas de stock',
+    description:
+      'Crea borradores de OC (estado pending) basados en el déficit actual de cada producto ' +
+      'con stock bajo mínimo, usando el último proveedor registrado en compras anteriores.',
+  })
+  @ApiOkResponse({ description: 'Resultado con OCs creadas y productos sin proveedor histórico.' })
+  async generatePurchaseOrders() {
+    return this.generatePos.execute();
   }
 
 }

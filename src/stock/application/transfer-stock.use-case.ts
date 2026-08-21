@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InvalidInputError } from '../../shared/domain/domain.error';
 import { STOCK_WRITER } from '../domain/stock-writer';
 import type { StockWriter } from '../domain/stock-writer';
+import { NotifyStockAlertsUseCase } from './notify-stock-alerts.use-case';
 
 export class SameWarehouseTransferError extends InvalidInputError {
   readonly code = 'SAME_WAREHOUSE_TRANSFER';
@@ -23,6 +24,7 @@ export class TransferStockUseCase {
   constructor(
     @Inject(STOCK_WRITER)
     private readonly stockWriter: StockWriter,
+    private readonly notifyAlerts: NotifyStockAlertsUseCase,
   ) {}
 
   async execute(command: TransferStockCommand): Promise<void> {
@@ -50,5 +52,7 @@ export class TransferStockUseCase {
         referenceId,
       },
     ]);
+
+    void this.notifyAlerts.execute([command.productId]);
   }
 }

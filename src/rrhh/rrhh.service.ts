@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { EmployeeOrmEntity } from './infrastructure/persistence/employee.orm-entity';
 import { PayrollOrmEntity } from './infrastructure/persistence/payroll.orm-entity';
 import { PayrollLineOrmEntity } from './infrastructure/persistence/payroll-line.orm-entity';
+import { PayrollSlipPdfGenerator } from './infrastructure/pdf/payroll-slip-pdf.generator';
+import { PlamePdfGenerator } from './infrastructure/pdf/plame-pdf.generator';
 
 // AFP rate: 10% (aporte obligatorio) + 1.74% comisión + 1.68% seguro = ~13.42% (usar 13%)
 // ONP rate: 13%
@@ -25,6 +27,8 @@ export class RrhhService {
     private readonly payrollRepo: Repository<PayrollOrmEntity>,
     @InjectRepository(PayrollLineOrmEntity)
     private readonly linesRepo: Repository<PayrollLineOrmEntity>,
+    private readonly slipPdf: PayrollSlipPdfGenerator,
+    private readonly plameGen: PlamePdfGenerator,
   ) {}
 
   // ── Employees ─────────────────────────────────────────────────────────────
@@ -209,6 +213,77 @@ export class RrhhService {
       };
     }));
     return result;
+  }
+
+  async getPayrollLine(payrollId: string, lineId: string) {
+    const line = await this.linesRepo.findOne({ where: { lineId, payrollId } });
+    if (!line) throw new NotFoundException(`Línea ${lineId} no encontrada en planilla ${payrollId}.`);
+    const emp = await this.empRepo.findOne({ where: { employeeId: line.employeeId } });
+    if (!emp) throw new NotFoundException(`Empleado ${line.employeeId} no encontrado.`);
+    return { line, emp };
+  }
+
+  async boletaPdf(payrollId: string, lineId: string): Promise<Buffer> {
+    const payroll = await this.payrollRepo.findOne({ where: { payrollId } });
+    if (!payroll) throw new NotFoundException(`Planilla ${payrollId} no encontrada.`);
+    const { line, emp } = await this.getPayrollLine(payrollId, lineId);
+    return this.slipPdf.render({
+      period:           payroll.period,
+      employeeName:     `${emp.lastName}, ${emp.firstName}`,
+      position:         emp.position,
+      pensionSystem:    emp.pensionSystem,
+      afpName:          emp.afpName,
+      documentType:     emp.documentType,
+      documentNumber:   emp.documentNumber,
+      daysWorked:       line.daysWorked,
+      basicSalary:      parseFloat(line.basicSalary),
+      familyAllowance:  parseFloat(line.familyAllowance),
+      overtime:         parseFloat(line.overtime),
+      grossSalary:      parseFloat(line.grossSalary),
+      pensionDeduction: parseFloat(line.pensionDeduction),
+      essalud:          parseFloat(line.essalud),
+      incomeTax:        parseFloat(line.incomeTax),
+      otherDeductions:  parseFloat(line.otherDeductions),
+      totalDeductions:  parseFloat(line.totalDeductions),
+      netSalary:        parseFloat(line.netSalary),
+      ctsProvision:     parseFloat(line.ctsProvision),
+      gratificationProv:parseFloat(line.gratificationProv),
+    });
+  }
+
+  async plamePdf(payrollId: string): Promise<Buffer> {
+    const payroll = await this.payrollRepo.findOne({ where: { payrollId } });
+    if (!payroll) throw new NotFoundException(`Planilla ${payrollId} no encontrada.`);
+    const rawLines = await this.getPayrollLines(payrollId);
+    let num = 1;
+    const lines = await Promise.all(
+      rawLines.map(async (l) => {
+        const emp = await this.empRepo.findOne({ where: { employeeId: l.employeeId } });
+        return {
+          num:              num++,
+          employeeName:     l.employeeName,
+          documentType:     emp?.documentType ?? 'DNI',
+          documentNumber:   emp?.documentNumber ?? '—',
+          position:         l.position,
+          pensionSystem:    l.pensionSystem,
+          afpName:          emp?.afpName ?? null,
+          grossSalary:      l.grossSalary,
+          pensionDeduction: l.pensionDeduction,
+          essalud:          l.essalud,
+          netSalary:        l.netSalary,
+          ctsProvision:     l.ctsProvision,
+          gratificationProv:l.gratificationProv,
+          daysWorked:       l.daysWorked,
+        };
+      }),
+    );
+    return this.plameGen.render({
+      period:          payroll.period,
+      totalGross:      parseFloat(payroll.totalGross),
+      totalDeductions: parseFloat(payroll.totalDeductions),
+      totalNet:        parseFloat(payroll.totalNet),
+      lines,
+    });
   }
 
   private mapEmployee(e: EmployeeOrmEntity) {

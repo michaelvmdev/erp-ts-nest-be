@@ -1,7 +1,8 @@
 import {
-  Body, Controller, Get, HttpCode, HttpStatus,
-  Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards,
+  Body, Controller, Get, Header, HttpCode, HttpStatus,
+  Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiTags,
 } from '@nestjs/swagger';
@@ -141,5 +142,30 @@ export class RrhhController {
     const p = await this.svc.approvePayroll(id, req.user?.email ?? 'system');
     void this.audit.log('payroll', id, 'UPDATE', req.user?.email ?? 'system', { status: 'approved' });
     return p;
+  }
+
+  @Get('payrolls/:id/lines/:lineId/boleta')
+  @ApiOperation({ summary: 'Descargar boleta de pago en PDF' })
+  async downloadBoleta(
+    @Param('id',     new ParseUUIDPipe()) id:     string,
+    @Param('lineId', new ParseUUIDPipe()) lineId: string,
+    @Res() res: Response,
+  ) {
+    const buf = await this.svc.boletaPdf(id, lineId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="boleta-${id}-${lineId}.pdf"`);
+    res.end(buf);
+  }
+
+  @Get('payrolls/:id/plame')
+  @ApiOperation({ summary: 'Descargar reporte PLAME en PDF (planilla electrónica)' })
+  async downloadPlame(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Res() res: Response,
+  ) {
+    const buf = await this.svc.plamePdf(id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="plame-${id}.pdf"`);
+    res.end(buf);
   }
 }

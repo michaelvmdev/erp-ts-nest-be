@@ -7,6 +7,8 @@ import { PayrollOrmEntity } from './infrastructure/persistence/payroll.orm-entit
 import { PayrollLineOrmEntity } from './infrastructure/persistence/payroll-line.orm-entity';
 import { RrhhService } from './rrhh.service';
 import { RrhhController } from './infrastructure/http/rrhh.controller';
+import { PayrollSlipPdfGenerator } from './infrastructure/pdf/payroll-slip-pdf.generator';
+import { PlamePdfGenerator } from './infrastructure/pdf/plame-pdf.generator';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { RrhhController } from './infrastructure/http/rrhh.controller';
     AuditModule,
   ],
   controllers: [RrhhController],
-  providers:   [RrhhService],
+  providers:   [RrhhService, PayrollSlipPdfGenerator, PlamePdfGenerator],
   exports:     [RrhhService],
 })
 export class RrhhModule {}

@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { GetStockAlertsUseCase } from './application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from './application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from './application/get-stock-movements.use-case';
 import { TransferStockUseCase } from './application/transfer-stock.use-case';
+import { NotifyStockAlertsUseCase } from './application/notify-stock-alerts.use-case';
+import { GeneratePosUseCase } from './application/generate-pos.use-case';
 import { STOCK_REPOSITORY } from './domain/stock.repository';
 import { STOCK_WRITER } from './domain/stock-writer';
 import { TypeOrmStockRepository } from './infrastructure/persistence/typeorm-stock.repository';
@@ -12,7 +15,7 @@ import { StockController } from './infrastructure/http/stock.controller';
 import { StockSseController } from './infrastructure/http/stock-sse.controller';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, NotificationsModule],
   controllers: [StockController, StockSseController],
   providers: [
     TypeOrmStockRepository,
@@ -23,6 +26,8 @@ import { StockSseController } from './infrastructure/http/stock-sse.controller';
     GetStockMovementsUseCase,
     GetStockAlertsUseCase,
     TransferStockUseCase,
+    NotifyStockAlertsUseCase,
+    GeneratePosUseCase,
   ],
   exports: [STOCK_WRITER],
 })
