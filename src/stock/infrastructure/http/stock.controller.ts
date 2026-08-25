@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Query, UseGuards } from '@nestjs/common';
+import { IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
@@ -9,6 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
+import { STOCK_WRITER, StockWriter } from '../../domain/stock-writer';
 import { GetStockAlertsUseCase } from '../../application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from '../../application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from '../../application/get-stock-movements.use-case';
@@ -27,6 +29,13 @@ import {
   StockMovementResponseDto,
 } from './dto/stock-movement.response.dto';
 
+class AdjustStockDto {
+  @IsUUID() productId: string;
+  @IsUUID() warehouseId: string;
+  @IsNumber() @Min(0) newQuantity: number;
+  @IsString() @IsOptional() notes?: string;
+}
+
 @ApiTags('stock')
 @ApiBearerAuth()
 @UseGuards(JwtGuard)
@@ -39,6 +48,7 @@ export class StockController {
     private readonly transferStock: TransferStockUseCase,
     private readonly notifyAlerts: NotifyStockAlertsUseCase,
     private readonly generatePos: GeneratePosUseCase,
+    @Inject(STOCK_WRITER) private readonly stockWriter: StockWriter,
   ) {}
 
   @Get()
@@ -163,6 +173,29 @@ export class StockController {
   @ApiOkResponse({ description: 'Resultado con OCs creadas y productos sin proveedor histórico.' })
   async generatePurchaseOrders() {
     return this.generatePos.execute();
+  }
+
+  @Post('adjust')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Inventario físico — ajuste de stock',
+    description: 'Registra la cantidad exacta contada en inventario físico. Genera un movimiento de tipo "adjustment" por la diferencia.',
+  })
+  @ApiOkResponse({ description: 'Movimiento de ajuste registrado.' })
+  async adjustStock(@Body() dto: AdjustStockDto) {
+    const levels = await this.getStockLevels.execute({ productId: dto.productId, warehouseId: dto.warehouseId, page: 1, limit: 1 });
+    const current = levels.items[0]?.currentQuantity ?? 0;
+    const delta = dto.newQuantity - current;
+    if (delta !== 0) {
+      await this.stockWriter.insertMovements([{
+        productId:    dto.productId,
+        warehouseId:  dto.warehouseId,
+        movementType: 'adjustment',
+        quantity:     delta,
+        referenceId:  `adj-${Date.now()}`,
+      }]);
+    }
+    return { productId: dto.productId, warehouseId: dto.warehouseId, previous: current, counted: dto.newQuantity, delta };
   }
 
 }

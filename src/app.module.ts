@@ -48,6 +48,7 @@ import { ActivosFijosModule } from './activos-fijos/activos-fijos.module';
 import { RrhhModule } from './rrhh/rrhh.module';
 import { CrmModule } from './crm/crm.module';
 import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
+import { RetencionesModule } from './retenciones/retenciones.module';
 import { PosModule } from './pos/pos.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -123,6 +124,7 @@ import { CompaniesModule } from './companies/companies.module';
     RrhhModule,
     CrmModule,
     ExchangeRatesModule,
+    RetencionesModule,
     PosModule,
     ProjectsModule,
     ContractsModule,

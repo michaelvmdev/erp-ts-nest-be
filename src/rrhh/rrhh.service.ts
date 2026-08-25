@@ -8,15 +8,40 @@ import { PayrollLineOrmEntity } from './infrastructure/persistence/payroll-line.
 import { PayrollSlipPdfGenerator } from './infrastructure/pdf/payroll-slip-pdf.generator';
 import { PlamePdfGenerator } from './infrastructure/pdf/plame-pdf.generator';
 
-// AFP rate: 10% (aporte obligatorio) + 1.74% comisión + 1.68% seguro = ~13.42% (usar 13%)
-// ONP rate: 13%
-const AFP_RATE    = 0.13;
-const ONP_RATE    = 0.13;
-const ESSALUD_RATE = 0.09; // 9% sobre sueldo básico (costo empleador)
-// CTS: 1/12 del sueldo bruto por mes trabajado
-// Gratificación: 1/6 del sueldo bruto por mes (julio y diciembre, pero provisión mensual)
+const AFP_RATE     = 0.13;
+const ONP_RATE     = 0.13;
+const ESSALUD_RATE = 0.09;
 const CTS_FACTOR   = 1 / 12;
 const GRAT_FACTOR  = 1 / 6;
+const UIT          = 5_150; // UIT 2024 S/ 5,150
+
+function calcular5taCat(grossMensual: number): number {
+  const anual     = grossMensual * 12;
+  const deduccion = 7 * UIT; // 7 UIT exoneradas
+  const renta     = anual - deduccion;
+  if (renta <= 0) return 0;
+
+  const tramos = [
+    { limite: 5  * UIT, tasa: 0.08 },
+    { limite: 20 * UIT, tasa: 0.14 },
+    { limite: 35 * UIT, tasa: 0.17 },
+    { limite: 45 * UIT, tasa: 0.20 },
+    { limite: Infinity, tasa: 0.30 },
+  ];
+
+  let impuesto = 0;
+  let base = renta;
+  let anterior = 0;
+  for (const t of tramos) {
+    const rango = t.limite - anterior;
+    const aplicable = Math.min(base, rango);
+    if (aplicable <= 0) break;
+    impuesto += aplicable * t.tasa;
+    base -= aplicable;
+    anterior = t.limite;
+  }
+  return Math.round((impuesto / 12) * 100) / 100;
+}
 
 @Injectable()
 export class RrhhService {
@@ -89,7 +114,7 @@ export class RrhhService {
     const gross       = basicSalary + overtime + familyAllowance;
     const pension     = gross * (pensionSystem === 'ONP' ? ONP_RATE : AFP_RATE);
     const essalud     = basicSalary * ESSALUD_RATE;
-    const incomeTax   = 0; // simplificado — 5ta categoría requiere proyección anual
+    const incomeTax   = calcular5taCat(gross);
     const totalDed    = pension + incomeTax;
     const net         = gross - totalDed;
     const cts         = gross * CTS_FACTOR;
@@ -102,7 +127,7 @@ export class RrhhService {
       grossSalary:      Math.round(gross * 100) / 100,
       pensionDeduction: Math.round(pension  * 100) / 100,
       essalud:          Math.round(essalud  * 100) / 100,
-      incomeTax:        0,
+      incomeTax:        Math.round(incomeTax * 100) / 100,
       otherDeductions:  0,
       totalDeductions:  Math.round(totalDed * 100) / 100,
       netSalary:        Math.round(net  * 100) / 100,
@@ -138,7 +163,7 @@ export class RrhhService {
       line.grossSalary       = calc.grossSalary.toFixed(2);
       line.pensionDeduction  = calc.pensionDeduction.toFixed(2);
       line.essalud           = calc.essalud.toFixed(2);
-      line.incomeTax         = '0.00';
+      line.incomeTax         = calc.incomeTax.toFixed(2);
       line.otherDeductions   = '0.00';
       line.totalDeductions   = calc.totalDeductions.toFixed(2);
       line.netSalary         = calc.netSalary.toFixed(2);
