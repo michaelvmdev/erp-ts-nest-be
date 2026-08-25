@@ -10,7 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { ApiErrorDto } from '../../../shared/infrastructure/http/api-error.dto';
-import { STOCK_WRITER, StockWriter } from '../../domain/stock-writer';
+import { STOCK_WRITER } from '../../domain/stock-writer';
+import type { StockWriter } from '../../domain/stock-writer';
 import { GetStockAlertsUseCase } from '../../application/get-stock-alerts.use-case';
 import { GetStockLevelsUseCase } from '../../application/get-stock-levels.use-case';
 import { GetStockMovementsUseCase } from '../../application/get-stock-movements.use-case';
@@ -30,9 +31,9 @@ import {
 } from './dto/stock-movement.response.dto';
 
 class AdjustStockDto {
-  @IsUUID() productId: string;
-  @IsUUID() warehouseId: string;
-  @IsNumber() @Min(0) newQuantity: number;
+  @IsUUID() productId!: string;
+  @IsUUID() warehouseId!: string;
+  @IsNumber() @Min(0) newQuantity!: number;
   @IsString() @IsOptional() notes?: string;
 }
 
@@ -184,7 +185,7 @@ export class StockController {
   @ApiOkResponse({ description: 'Movimiento de ajuste registrado.' })
   async adjustStock(@Body() dto: AdjustStockDto) {
     const levels = await this.getStockLevels.execute({ productId: dto.productId, warehouseId: dto.warehouseId, page: 1, limit: 1 });
-    const current = levels.items[0]?.currentQuantity ?? 0;
+    const current = levels.items[0]?.quantity ?? 0;
     const delta = dto.newQuantity - current;
     if (delta !== 0) {
       await this.stockWriter.insertMovements([{

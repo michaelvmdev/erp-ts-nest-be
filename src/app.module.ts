@@ -49,6 +49,10 @@ import { RrhhModule } from './rrhh/rrhh.module';
 import { CrmModule } from './crm/crm.module';
 import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
 import { RetencionesModule } from './retenciones/retenciones.module';
+import { GuiasRemisionModule } from './guias-remision/guias-remision.module';
+import { CuentasCobrarModule } from './cuentas-cobrar/cuentas-cobrar.module';
+import { ConciliacionModule } from './conciliacion/conciliacion.module';
+import { CostCentersModule } from './cost-centers/cost-centers.module';
 import { PosModule } from './pos/pos.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -125,6 +129,10 @@ import { CompaniesModule } from './companies/companies.module';
     CrmModule,
     ExchangeRatesModule,
     RetencionesModule,
+    GuiasRemisionModule,
+    CuentasCobrarModule,
+    ConciliacionModule,
+    CostCentersModule,
     PosModule,
     ProjectsModule,
     ContractsModule,

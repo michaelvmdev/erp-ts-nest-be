@@ -5,10 +5,10 @@ import { JwtGuard } from '../../../auth/infrastructure/guards/jwt.guard';
 import { RetencionesService } from '../../retenciones.service';
 
 class CreateRetencionDto {
-  @IsUUID()    purchaseId: string;
-  @IsUUID()    supplierId: string;
-  @IsNumber() @Min(0) baseAmount: number;
-  @IsString()  period: string;
+  @IsUUID()    purchaseId!: string;
+  @IsUUID()    supplierId!: string;
+  @IsNumber() @Min(0) baseAmount!: number;
+  @IsString()  period!: string;
   @IsString() @IsOptional() notes?: string;
 }
 
