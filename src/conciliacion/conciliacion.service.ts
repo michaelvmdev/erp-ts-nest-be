@@ -57,23 +57,29 @@ export class ConciliacionService {
   }
 
   async summary(period: string) {
-    const [rows] = await this.ds.query<{ match_status: string; count: string; total: string }[]>(`
+    const rows = await this.ds.query<Array<{ match_status: string; count: string; total: string }>>(`
       SELECT match_status, COUNT(*)::int as count, SUM(amount) as total
       FROM bank_statement_lines
       WHERE period = $1
       GROUP BY match_status
     `, [period]);
-    const bankTotal = await this.ds.query<[{ total: string }]>(`SELECT COALESCE(SUM(amount),0) as total FROM bank_statement_lines WHERE period = $1`, [period]);
-    const treasuryTotal = await this.ds.query<[{ total: string }]>(`
+    const [bankRow]     = await this.ds.query<Array<{ total: string }>>(`SELECT COALESCE(SUM(amount),0) as total FROM bank_statement_lines WHERE period = $1`, [period]);
+    const [treasuryRow] = await this.ds.query<Array<{ total: string }>>(`
       SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE -amount END), 0) as total
       FROM treasury_movements
       WHERE LEFT(movement_date::text, 7) = $1
     `, [period]);
+    const bankTotal     = parseFloat(bankRow?.total ?? '0');
+    const treasuryTotal = parseFloat(treasuryRow?.total ?? '0');
+    const rowList       = Array.isArray(rows) ? rows : [];
+    const unmatchedRow  = rowList.find(r => r.match_status === 'unmatched');
     return {
       period,
-      bankTotal:     parseFloat((bankTotal as unknown as [{ total: string }])[0]?.total ?? '0'),
-      treasuryTotal: parseFloat((treasuryTotal as unknown as [{ total: string }])[0]?.total ?? '0'),
-      lines:         Array.isArray(rows) ? rows : [],
+      bankTotal,
+      treasuryTotal,
+      diff:           Math.round((bankTotal - treasuryTotal) * 100) / 100,
+      unmatchedCount: parseInt(unmatchedRow?.count ?? '0', 10),
+      lines:          rowList,
     };
   }
 

@@ -82,8 +82,9 @@ export class RrhhVacacionesService {
       hireDate:     emp.hireDate,
       monthsWorked,
       accrued,
-      used:    usedDays,
-      balance: accrued - usedDays,
+      used:      usedDays,
+      balance:   accrued - usedDays,
+      available: accrued - usedDays,
     };
   }
 

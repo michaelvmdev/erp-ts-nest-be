@@ -17,6 +17,13 @@ export class ConciliacionController {
     return this.svc.listLines(period, matchStatus, +page, +limit);
   }
 
+  @Get('lines')
+  @ApiOperation({ summary: 'Listar líneas de extracto bancario (alias)' })
+  lines(@Query('period') period: string, @Query('matchStatus') matchStatus?: string,
+        @Query('page') page = 1, @Query('limit') limit = 50) {
+    return this.svc.listLines(period, matchStatus, +page, +limit);
+  }
+
   @Get('summary')
   @ApiOperation({ summary: 'Resumen de conciliación por período' })
   summary(@Query('period') period: string) { return this.svc.summary(period); }

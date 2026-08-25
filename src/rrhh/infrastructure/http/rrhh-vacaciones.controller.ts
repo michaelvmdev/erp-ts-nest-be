@@ -22,13 +22,19 @@ export class RrhhVacacionesController {
     return this.svc.list(employeeId, status, +page, +limit);
   }
 
-  @Get('balance/:employeeId')
+  @Get('balance')
   @ApiOperation({ summary: 'Saldo de vacaciones acumuladas de un empleado' })
-  balance(@Param('employeeId') employeeId: string) { return this.svc.accrualBalance(employeeId); }
+  balance(@Query('employeeId') employeeId: string) { return this.svc.accrualBalance(employeeId); }
 
   @Get('liquidacion/:employeeId')
   @ApiOperation({ summary: 'Cálculo de liquidación de beneficios al cese' })
   liquidacion(@Param('employeeId') employeeId: string) { return this.liquidacionSvc.compute(employeeId); }
+
+  @Post('liquidacion/compute')
+  @ApiOperation({ summary: 'Calcular liquidación con fecha de cese personalizada' })
+  computeLiquidacion(@Body() dto: { employeeId: string; terminationDate: string }) {
+    return this.liquidacionSvc.compute(dto.employeeId, dto.terminationDate);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Solicitar vacaciones' })

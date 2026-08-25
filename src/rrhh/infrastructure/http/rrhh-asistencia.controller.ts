@@ -14,15 +14,19 @@ export class RrhhAsistenciaController {
   @ApiOperation({ summary: 'Listar registros de asistencia' })
   list(
     @Query('employeeId') employeeId?: string,
-    @Query('month') month?: string,
+    @Query('period') period?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 30,
   ) {
-    return this.svc.list(employeeId, month, +page, +limit);
+    return this.svc.list(employeeId, period, +page, +limit);
   }
 
-  @Get('report')
+  @Get('monthly-report')
   @ApiOperation({ summary: 'Reporte mensual de asistencia por empleado' })
+  monthlyReport(@Query('period') period: string) { return this.svc.monthlyReport(period); }
+
+  @Get('report')
+  @ApiOperation({ summary: 'Reporte mensual de asistencia (alias)' })
   report(@Query('month') month: string) { return this.svc.monthlyReport(month); }
 
   @Post()
