@@ -50,19 +50,19 @@ export class RrhhAsistenciaService {
   }
 
   async monthlyReport(month: string) {
-    const presentRows = await this.repo.createQueryBuilder('a')
-      .select(['a.employeeId as emp_id',
-               'SUM(CASE WHEN a.status IN (\'present\',\'late\') THEN 1 ELSE 0 END) as days_present',
-               'SUM(CASE WHEN a.status = \'absent\' THEN 1 ELSE 0 END) as days_absent',
-               'SUM(a.hoursWorked) as total_hours',
-               'SUM(a.overtimeHours) as total_overtime'])
+    const rows = await this.repo.createQueryBuilder('a')
+      .select('a.employeeId')
+      .addSelect("SUM(CASE WHEN a.status IN ('present','late') THEN 1 ELSE 0 END)", 'days_present')
+      .addSelect("SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END)", 'days_absent')
+      .addSelect('SUM(a.hoursWorked)', 'total_hours')
+      .addSelect('SUM(a.overtimeHours)', 'total_overtime')
       .where("LEFT(a.date::text, 7) = :month", { month })
       .groupBy('a.employeeId')
-      .getRawMany();
-    const result = await Promise.all(presentRows.map(async (r) => {
-      const emp = await this.empRepo.findOne({ where: { employeeId: r.emp_id } });
+      .getRawMany<{ a_employee_id: string; days_present: string; days_absent: string; total_hours: string; total_overtime: string }>();
+    return Promise.all(rows.map(async (r) => {
+      const emp = await this.empRepo.findOne({ where: { employeeId: r.a_employee_id } });
       return {
-        employeeId:    r.emp_id,
+        employeeId:    r.a_employee_id,
         employeeName:  emp ? `${emp.firstName} ${emp.lastName}` : '—',
         totalPresent:  parseInt(r.days_present ?? '0', 10),
         totalAbsent:   parseInt(r.days_absent ?? '0', 10),
@@ -70,7 +70,6 @@ export class RrhhAsistenciaService {
         totalOvertime: parseFloat(r.total_overtime ?? '0'),
       };
     }));
-    return result;
   }
 
   private calcHours(checkIn?: string, checkOut?: string): number {
